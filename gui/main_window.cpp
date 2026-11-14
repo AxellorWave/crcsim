@@ -1,0 +1,236 @@
+#include "main_window.h"
+
+#include "channel_panel.h"
+#include "coding_panel.h"
+#include "control_panel.h"
+#include "model_diagram.h"
+#include "results_table.h"
+#include "run_report.h"
+
+#include "results.h"
+
+#include <QCloseEvent>
+#include <QFile>
+#include <QFileDialog>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMessageBox>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QSplitter>
+#include <QVBoxLayout>
+
+#include <exception>
+
+MainWindow::MainWindow(QWidget* parent)
+    : QMainWindow(parent)
+    , codingPanel_(new CodingPanel)
+    , channelPanel_(new ChannelPanel)
+    , controlPanel_(new ControlPanel)
+    , errorLabel_(new QLabel)
+    , diagram_(new ModelDiagram)
+    , startButton_(new QPushButton(QStringLiteral("Старт")))
+    , stopButton_(new QPushButton(QStringLiteral("Стоп")))
+    , progressBar_(new QProgressBar)
+    , countersLabel_(new QLabel)
+    , statusLabel_(new QLabel)
+    , resultsTable_(new ResultsTable)
+    , clearButton_(new QPushButton(QStringLiteral("Очистить")))
+    , saveButton_(new QPushButton(QStringLiteral("Сохранить в CSV")))
+    , runner_(this)
+{
+    setWindowTitle(QStringLiteral("Исследование циклических кодов в режиме обнаружения ошибок"));
+    startButton_->setObjectName(QStringLiteral("startButton"));
+    stopButton_->setObjectName(QStringLiteral("stopButton"));
+
+    auto* splitter = new QSplitter(Qt::Horizontal);
+    splitter->addWidget(createParameterColumn());
+    splitter->addWidget(createRunColumn());
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+    splitter->setChildrenCollapsible(false);
+    splitter->setSizes({440, 880});
+    setCentralWidget(splitter);
+    resize(1320, 780);
+
+    connectActions();
+    countersLabel_->setText(countersText({}));
+    statusLabel_->setText(QStringLiteral("Задайте параметры и нажмите «Старт»."));
+    setRunning(false);
+    revalidate();
+}
+
+QWidget* MainWindow::createParameterColumn()
+{
+    errorLabel_->setObjectName(QStringLiteral("errorLabel"));
+    errorLabel_->setWordWrap(true);
+    errorLabel_->setStyleSheet(QStringLiteral("color: #b01010;"));
+
+    auto* column = new QWidget;
+    auto* layout = new QVBoxLayout(column);
+    layout->addWidget(codingPanel_);
+    layout->addWidget(channelPanel_);
+    layout->addWidget(controlPanel_);
+    layout->addWidget(errorLabel_);
+    layout->addStretch();
+    column->setMinimumWidth(400);
+    return column;
+}
+
+QWidget* MainWindow::createRunColumn()
+{
+    countersLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    statusLabel_->setObjectName(QStringLiteral("statusLabel"));
+    statusLabel_->setWordWrap(true);
+    statusLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    auto* column = new QWidget;
+    auto* layout = new QVBoxLayout(column);
+    layout->addWidget(diagram_);
+    layout->addWidget(createRunControls());
+    layout->addWidget(countersLabel_);
+    layout->addWidget(statusLabel_);
+    layout->addWidget(resultsTable_, 1);
+    layout->addWidget(createTableControls());
+    return column;
+}
+
+QWidget* MainWindow::createRunControls()
+{
+    progressBar_->setRange(0, 1000);
+    progressBar_->setValue(0);
+    progressBar_->setFormat(QStringLiteral("%p %"));
+    auto* row = new QWidget;
+    auto* layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(startButton_);
+    layout->addWidget(stopButton_);
+    layout->addWidget(progressBar_, 1);
+    return row;
+}
+
+QWidget* MainWindow::createTableControls()
+{
+    auto* row = new QWidget;
+    auto* layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addStretch();
+    layout->addWidget(clearButton_);
+    layout->addWidget(saveButton_);
+    return row;
+}
+
+void MainWindow::connectActions()
+{
+    codingPanel_->setOnChanged([this] { revalidate(); });
+    channelPanel_->setOnChanged([this] { revalidate(); });
+    controlPanel_->setOnChanged([this] { revalidate(); });
+    connect(startButton_, &QPushButton::clicked, this, [this] { startSimulation(); });
+    connect(stopButton_, &QPushButton::clicked, this, [this] {
+        runner_.cancel();
+        stopButton_->setEnabled(false);
+        statusLabel_->setText(QStringLiteral("Остановка…"));
+    });
+    connect(clearButton_, &QPushButton::clicked, this, [this] { clearResults(); });
+    connect(saveButton_, &QPushButton::clicked, this, [this] { saveResults(); });
+}
+
+void MainWindow::revalidate()
+{
+    std::vector<FieldError> errors = codingPanel_->validate();
+    const std::vector<FieldError> channelErrors = channelPanel_->validate();
+    const std::vector<FieldError> controlErrors = controlPanel_->validate();
+    errors.insert(errors.end(), channelErrors.begin(), channelErrors.end());
+    errors.insert(errors.end(), controlErrors.begin(), controlErrors.end());
+    parametersValid_ = errors.empty();
+    errorLabel_->setText(joinFieldErrors(errors));
+    errorLabel_->setVisible(!parametersValid_);
+    startButton_->setEnabled(parametersValid_ && !runner_.running());
+}
+
+void MainWindow::setRunning(bool running)
+{
+    codingPanel_->setEnabled(!running);
+    channelPanel_->setEnabled(!running);
+    controlPanel_->setEnabled(!running);
+    startButton_->setEnabled(!running && parametersValid_);
+    stopButton_->setEnabled(running);
+    clearButton_->setEnabled(!running);
+    updateTableButtons();
+}
+
+void MainWindow::updateTableButtons()
+{
+    const bool hasResults = !resultsTable_->results().empty();
+    clearButton_->setEnabled(hasResults && !runner_.running());
+    saveButton_->setEnabled(hasResults);
+}
+
+void MainWindow::startSimulation()
+{
+    revalidate();
+    if (!parametersValid_ || runner_.running())
+        return;
+    crc::SimulationParams params;
+    params.coding = codingPanel_->params();
+    params.channel = channelPanel_->params();
+    params.control = controlPanel_->params();
+    runningControl_ = params.control;
+
+    progressBar_->setValue(0);
+    countersLabel_->setText(countersText({}));
+    statusLabel_->setText(QStringLiteral("Идёт моделирование…"));
+    runner_.start(
+        params, [this](const crc::Counters& counters) { showProgress(counters); },
+        [this](const crc::SimulationResult& result) { finishSimulation(result); },
+        [this](const QString& message) { failSimulation(message); });
+    setRunning(true);
+}
+
+void MainWindow::showProgress(const crc::Counters& counters)
+{
+    progressBar_->setValue(progressPermille(counters, runningControl_));
+    countersLabel_->setText(countersText(counters));
+}
+
+void MainWindow::finishSimulation(const crc::SimulationResult& result)
+{
+    showProgress(result.counters);
+    resultsTable_->addResult(result);
+    statusLabel_->setText(runSummaryText(result));
+    setRunning(false);
+}
+
+void MainWindow::failSimulation(const QString& message)
+{
+    setRunning(false);
+    statusLabel_->setText(QStringLiteral("Ошибка моделирования: ") + message);
+    QMessageBox::critical(this, QStringLiteral("Ошибка"), QStringLiteral("Не удалось выполнить моделирование:\n") + message);
+}
+
+void MainWindow::saveResults()
+{
+    const QString path = QFileDialog::getSaveFileName(
+        this, QStringLiteral("Сохранить результаты"), QStringLiteral("results.csv"), QStringLiteral("Файлы CSV (*.csv)"));
+    if (path.isEmpty())
+        return;
+    try {
+        crc::writeCsv(QFile::encodeName(path).toStdString(), resultsTable_->results());
+        statusLabel_->setText(QStringLiteral("Результаты сохранены в файл ") + path);
+    } catch (const std::exception& error) {
+        QMessageBox::critical(this, QStringLiteral("Ошибка сохранения"),
+            QStringLiteral("Не удалось сохранить результаты:\n") + QString::fromUtf8(error.what()));
+    }
+}
+
+void MainWindow::clearResults()
+{
+    resultsTable_->clearResults();
+    updateTableButtons();
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    runner_.cancel();
+    event->accept();
+}
