@@ -9,3 +9,4 @@ INCLUDEPATH += $$PWD/../../core
 SOURCES += $$files($$PWD/../../core/*.cpp) $$files($$PWD/../../gui/*.cpp)
 QTPLUGIN.imageformats = -
 QTPLUGIN.iconengines = -
+LIBS += -Wl,--start-group -lharfbuzz -lfreetype -lgraphite2 -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lglib-2.0 -lintl -liconv -lpcre2-8 -Wl,--end-group -ldnsapi -liphlpapi -lws2_32 -lole32 -lwinmm -lshlwapi -luuid -lusp10 -lrpcrt4
