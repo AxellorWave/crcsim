@@ -65,9 +65,8 @@ jobs:
           printf '%s\n' '[Paths]' "Prefix=$qt" 'ArchData=share/qt6' 'Data=share/qt6' 'HostData=share/qt6' 'Headers=include/qt6' 'Libraries=lib' 'Plugins=share/qt6/plugins' 'Binaries=bin' 'LibraryExecutables=share/qt6/bin' 'HostBinaries=bin' 'HostLibraryExecutables=share/qt6/bin' 'HostLibraries=lib' > qt.conf
           /ucrt64/qt6-static/bin/qmake6 -qtconf qt.conf ../../packaging/windows/crcsim-gui.pro
           sed -i '/^LIBS *=/ s/$/ -Wl,--start-group -lharfbuzz -lfreetype -lgraphite2 -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lglib-2.0 -lintl -liconv -lpcre2-8 -Wl,--end-group -ldnsapi -liphlpapi -lws2_32 -lole32 -lwinmm -lshlwapi -luuid -lusp10 -lrpcrt4/' Makefile
-          grep '^LIBS' Makefile
           mingw32-make -j4
-          ls -l crcsim-gui.exe || { ls /ucrt64/lib/lib{png16,pcre2-8,glib-2.0,harfbuzz,freetype,brotlidec,b2,ssl,crypto,intl,iconv,graphite2,bz2,z,zstd}*.a; exit 1; }
+          ls -l crcsim-gui.exe
 
       - name: stage
         run: |
