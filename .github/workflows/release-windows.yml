@@ -47,9 +47,10 @@ jobs:
         run: |
           mkdir -p build/gui-static
           cd build/gui-static
-          /ucrt64/qt6-static/bin/qmake6 -query
-          ls /ucrt64/qt6-static/share/qt6/mkspecs | head -50
-          /ucrt64/qt6-static/bin/qmake6 -spec /ucrt64/qt6-static/share/qt6/mkspecs/win32-g++ ../../packaging/windows/crcsim-gui.pro
+          qt=$(cygpath -m /ucrt64/qt6-static)
+          printf '%s\n' '[Paths]' "Prefix=$qt" 'ArchData=share/qt6' 'Data=share/qt6' 'HostData=share/qt6' 'Headers=include/qt6' 'Libraries=lib' 'Plugins=share/qt6/plugins' 'Binaries=bin' 'LibraryExecutables=share/qt6/bin' 'HostBinaries=bin' 'HostLibraryExecutables=share/qt6/bin' 'HostLibraries=lib' > qt.conf
+          /ucrt64/qt6-static/bin/qmake6 -qtconf qt.conf -query
+          /ucrt64/qt6-static/bin/qmake6 -qtconf qt.conf ../../packaging/windows/crcsim-gui.pro
           mingw32-make -j4
           ls -l crcsim-gui.exe
 
