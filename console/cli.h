@@ -13,6 +13,7 @@ struct CommandLine {
     bool csvOutput = false;
     bool quiet = false;
     bool help = false;
+    bool listCodes = false;
 };
 
 CommandLine parseCommandLine(const std::vector<std::string>& arguments);

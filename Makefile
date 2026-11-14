@@ -26,7 +26,7 @@ TEST_SRC := $(wildcard tests/*.cpp)
 TEST_OBJ := $(TEST_SRC:%.cpp=$(BUILD)/%.o)
 TEST_BIN := $(BUILD)/crcsim_tests$(EXE)
 
-.PHONY: all console tests test clean
+.PHONY: all console tests test research-tools clean
 
 all: console
 
@@ -36,6 +36,13 @@ tests: $(TEST_BIN)
 
 test: $(TEST_BIN)
 	$(TEST_BIN)
+
+WEIGHTS_BIN := $(BUILD)/weight_enumerator$(EXE)
+
+research-tools: $(CONSOLE_BIN) $(WEIGHTS_BIN)
+
+$(WEIGHTS_BIN): $(BUILD)/research/weight_enumerator.o $(CORE_LIB)
+	$(CXX) $(LDFLAGS) $(STATIC_LDFLAGS) -o $@ $^
 
 $(CORE_LIB): $(CORE_OBJ)
 	@mkdir -p $(dir $@)

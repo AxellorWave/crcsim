@@ -1,4 +1,5 @@
 #include "cli.h"
+#include "codes.h"
 #include "dialog.h"
 #include "report.h"
 #include "results.h"
@@ -59,6 +60,13 @@ int saveCsv(const std::string& path, const crc::SimulationResult& result)
     }
 }
 
+void printKnownCodes()
+{
+    std::cout << "n;k;t;g\n";
+    for (const crc::KnownCode& code : crc::knownCodes())
+        std::cout << code.n << ';' << code.k << ';' << code.correctableErrors << ';' << code.binary << '\n';
+}
+
 int runInteractive()
 {
     std::cout << "=== Моделирование циклического кода: режим обнаружения ошибок ===\n\n";
@@ -103,6 +111,10 @@ int main(int argc, char** argv)
         return runInteractive();
     try {
         const console::CommandLine commandLine = console::parseCommandLine(std::vector<std::string>(argv + 1, argv + argc));
+        if (commandLine.listCodes) {
+            printKnownCodes();
+            return exitSuccess;
+        }
         if (commandLine.help) {
             std::cout << console::usage();
             return exitSuccess;
