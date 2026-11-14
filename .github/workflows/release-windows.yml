@@ -30,6 +30,20 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-boost
             mingw-w64-ucrt-x86_64-qt6-static
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-pcre2
+            mingw-w64-ucrt-x86_64-glib2
+            mingw-w64-ucrt-x86_64-graphite2
+            mingw-w64-ucrt-x86_64-harfbuzz
+            mingw-w64-ucrt-x86_64-freetype
+            mingw-w64-ucrt-x86_64-brotli
+            mingw-w64-ucrt-x86_64-libb2
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-bzip2
+            mingw-w64-ucrt-x86_64-zstd
+            mingw-w64-ucrt-x86_64-gettext-runtime
+            mingw-w64-ucrt-x86_64-libiconv
 
       - name: test
         run: make -j test
@@ -52,7 +66,7 @@ jobs:
           /ucrt64/qt6-static/bin/qmake6 -qtconf qt.conf -query
           /ucrt64/qt6-static/bin/qmake6 -qtconf qt.conf ../../packaging/windows/crcsim-gui.pro
           mingw32-make -j4
-          ls -l crcsim-gui.exe
+          ls -l crcsim-gui.exe || { ls /ucrt64/lib/lib{png16,pcre2-8,glib-2.0,harfbuzz,freetype,brotlidec,b2,ssl,crypto,intl,iconv,graphite2,bz2,z,zstd}*.a; exit 1; }
 
       - name: stage
         run: |

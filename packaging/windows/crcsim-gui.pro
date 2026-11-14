@@ -7,3 +7,5 @@ DESTDIR = $$OUT_PWD
 QMAKE_LFLAGS += -static
 INCLUDEPATH += $$PWD/../../core
 SOURCES += $$files($$PWD/../../core/*.cpp) $$files($$PWD/../../gui/*.cpp)
+QTPLUGIN.imageformats = -
+QTPLUGIN.iconengines = -
