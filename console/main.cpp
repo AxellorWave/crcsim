@@ -1,7 +1,115 @@
-#include <iostream>
+#include "cli.h"
+#include "dialog.h"
+#include "report.h"
+#include "results.h"
+#include "simulator.h"
+#include "terminal.h"
 
-int main()
+#include <algorithm>
+#include <iostream>
+#include <stdexcept>
+
+namespace {
+
+constexpr int exitSuccess = 0;
+constexpr int exitInvalidInput = 1;
+constexpr int exitOutputFailure = 2;
+
+std::uint64_t percentDone(const crc::Counters& counters, const crc::ControlParams& control)
 {
-    std::cout << "crcsim\n";
-    return 0;
+    const std::uint64_t byBlocks = counters.blocks * 100 / control.blockLimit;
+    if (control.stopMode == crc::StopMode::BlockCount)
+        return byBlocks;
+    return std::max(byBlocks, counters.erroneous() * 100 / control.errorLimit);
+}
+
+crc::RunControl progressPrinter(const crc::ControlParams& control)
+{
+    crc::RunControl runControl;
+    runControl.progressInterval = std::max<std::uint64_t>(1, control.blockLimit / 1000);
+    runControl.onProgress = [control, lastShown = std::uint64_t{101}](const crc::Counters& counters) mutable {
+        const std::uint64_t percent = std::min<std::uint64_t>(100, percentDone(counters, control));
+        if (percent == lastShown)
+            return;
+        lastShown = percent;
+        std::cerr << "\r  выполнено " << percent << " %" << std::flush;
+    };
+    return runControl;
+}
+
+crc::SimulationResult simulate(const crc::SimulationParams& params, bool showProgress)
+{
+    crc::Simulator simulator(params);
+    if (!showProgress)
+        return simulator.run();
+    const crc::SimulationResult result = simulator.run(progressPrinter(params.control));
+    std::cerr << "\r                    \r";
+    return result;
+}
+
+int saveCsv(const std::string& path, const crc::SimulationResult& result)
+{
+    try {
+        crc::appendCsv(path, result);
+        std::cout << "Строка добавлена в " << path << '\n';
+        return exitSuccess;
+    } catch (const std::runtime_error& error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
+        return exitOutputFailure;
+    }
+}
+
+int runInteractive()
+{
+    std::cout << "=== Моделирование циклического кода: режим обнаружения ошибок ===\n\n";
+    const auto params = console::askParams(std::cin, std::cout);
+    if (!params)
+        return exitInvalidInput;
+    std::cout << "\nМоделирование...\n";
+    const crc::SimulationResult result = simulate(*params, true);
+    console::printFirstBlock(std::cout, result);
+    console::printResults(std::cout, result, params->channel);
+    const auto path = console::askCsvPath(std::cin, std::cout);
+    return path ? saveCsv(*path, result) : exitSuccess;
+}
+
+int runBatch(const console::CommandLine& commandLine)
+{
+    const crc::SimulationResult result = simulate(commandLine.params, !commandLine.quiet && !commandLine.csvOutput);
+    if (commandLine.csvOutput)
+        std::cout << crc::csvHeader() << '\n' << crc::csvRow(result) << '\n';
+    else
+        console::printResults(std::cout, result, commandLine.params.channel);
+    if (commandLine.csvPath.empty())
+        return exitSuccess;
+    if (commandLine.csvOutput) {
+        try {
+            crc::appendCsv(commandLine.csvPath, result);
+            return exitSuccess;
+        } catch (const std::runtime_error& error) {
+            std::cerr << "Ошибка: " << error.what() << '\n';
+            return exitOutputFailure;
+        }
+    }
+    return saveCsv(commandLine.csvPath, result);
+}
+
+}
+
+int main(int argc, char** argv)
+{
+    console::prepareTerminal();
+    if (argc == 1)
+        return runInteractive();
+    try {
+        const console::CommandLine commandLine = console::parseCommandLine(std::vector<std::string>(argv + 1, argv + argc));
+        if (commandLine.help) {
+            std::cout << console::usage();
+            return exitSuccess;
+        }
+        return runBatch(commandLine);
+    } catch (const std::invalid_argument& error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
+        return exitInvalidInput;
+    }
 }
