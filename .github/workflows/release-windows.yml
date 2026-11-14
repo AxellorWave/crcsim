@@ -1,0 +1,153 @@
+name: release-windows
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make
+            zip
+            unzip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-make
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-boost
+            mingw-w64-ucrt-x86_64-qt6-static
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-pcre2
+            mingw-w64-ucrt-x86_64-glib2
+            mingw-w64-ucrt-x86_64-graphite2
+            mingw-w64-ucrt-x86_64-harfbuzz
+            mingw-w64-ucrt-x86_64-freetype
+            mingw-w64-ucrt-x86_64-brotli
+            mingw-w64-ucrt-x86_64-libb2
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-bzip2
+            mingw-w64-ucrt-x86_64-zstd
+            mingw-w64-ucrt-x86_64-gettext-runtime
+            mingw-w64-ucrt-x86_64-libiconv
+
+      - name: test
+        run: make -j test
+
+      - name: build console
+        run: make -j all
+
+      - name: smoke
+        run: |
+          out=$(build/crcsim.exe --n 15 --g 10011 --p 0.005 --blocks 3000000 --seed 42 --csv-stdout)
+          echo "$out"
+          echo "$out" | grep -q '2782365;217615;20'
+
+      - name: build gui
+        run: |
+          mkdir -p build/gui-static
+          cd build/gui-static
+          qt=$(cygpath -m /ucrt64/qt6-static)
+          printf '%s\n' '[Paths]' "Prefix=$qt" 'ArchData=share/qt6' 'Data=share/qt6' 'HostData=share/qt6' 'Headers=include/qt6' 'Libraries=lib' 'Plugins=share/qt6/plugins' 'Binaries=bin' 'LibraryExecutables=share/qt6/bin' 'HostBinaries=bin' 'HostLibraryExecutables=share/qt6/bin' 'HostLibraries=lib' > qt.conf
+          /ucrt64/qt6-static/bin/qmake6 -qtconf qt.conf ../../packaging/windows/crcsim-gui.pro
+          sed -i '/^LIBS *=/ s/$/ -Wl,--start-group -lharfbuzz -lfreetype -lgraphite2 -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lglib-2.0 -lintl -liconv -lpcre2-8 -Wl,--end-group -ldnsapi -liphlpapi -lws2_32 -lole32 -lwinmm -lshlwapi -luuid -lusp10 -lrpcrt4/' Makefile
+          mingw32-make -j4
+          ls -l crcsim-gui.exe
+
+      - name: stage
+        run: |
+          dst=stage/crcsim
+          mkdir -p "$dst" dist
+          cp build/crcsim.exe build/gui-static/crcsim-gui.exe README.md packaging/windows/README-windows.txt "$dst/"
+          strip "$dst/crcsim.exe" "$dst/crcsim-gui.exe"
+          find stage | sort
+
+      - name: verify
+        run: |
+          bad=0
+          for f in stage/crcsim/crcsim.exe stage/crcsim/crcsim-gui.exe; do
+            res=$(PATH=/usr/bin:/c/Windows/System32:/c/Windows ldd "$f" 2>&1 || true)
+            echo "$f"
+            echo "$res"
+            if echo "$res" | awk '{print $3}' | grep -v -i '^/c/windows/' | grep -q .; then
+              echo "non-system dependency: $f"
+              bad=1
+            fi
+            if echo "$res" | grep -Eiq 'not found|\?\?\?'; then
+              bad=1
+            fi
+          done
+          [ "$bad" = 0 ]
+
+      - name: gui smoke
+        run: |
+          cd stage/crcsim
+          PATH=/usr/bin:/c/Windows/System32:/c/Windows QT_FORCE_STDERR_LOGGING=1 ./crcsim-gui.exe 2> ../gui.log &
+          pid=$!
+          sleep 5
+          alive=0
+          kill -0 "$pid" 2>/dev/null && alive=1
+          kill "$pid" 2>/dev/null || true
+          cat ../gui.log
+          [ "$alive" = 1 ]
+          ! grep -qi 'could not' ../gui.log
+
+      - name: package
+        run: |
+          cp stage/crcsim/crcsim.exe stage/crcsim/crcsim-gui.exe dist/
+          cd stage
+          zip -r -9 ../dist/crcsim-windows-x86_64.zip crcsim
+          cd ..
+          unzip -l dist/crcsim-windows-x86_64.zip
+
+      - name: installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$PWD\stage\crcsim" "/DOutputDir=$PWD\dist" packaging\windows\crcsim.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: installer smoke
+        shell: pwsh
+        run: |
+          Start-Process -Wait -FilePath dist\crcsim-setup.exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon'
+          $app = Join-Path $env:ProgramFiles 'crcsim'
+          foreach ($f in 'crcsim-gui.exe', 'crcsim.exe', 'README.md', 'unins000.exe') {
+            if (-not (Test-Path (Join-Path $app $f))) { Write-Error "missing $f"; exit 1 }
+          }
+          & (Join-Path $app 'crcsim.exe') --list-codes
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Start-Process -Wait -FilePath (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          Start-Sleep -Seconds 3
+          if (Test-Path (Join-Path $app 'crcsim-gui.exe')) { Write-Error 'uninstall failed'; exit 1 }
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: crcsim-windows
+          path: dist/*
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/crcsim-gui.exe
+            dist/crcsim.exe
+            dist/crcsim-setup.exe
+            dist/crcsim-windows-x86_64.zip

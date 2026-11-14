@@ -1,0 +1,11 @@
+TEMPLATE = app
+TARGET = crcsim-gui
+QT += widgets
+CONFIG += c++17 release static
+CONFIG -= debug_and_release console
+DESTDIR = $$OUT_PWD
+QMAKE_LFLAGS += -static
+INCLUDEPATH += $$PWD/../../core
+SOURCES += $$files($$PWD/../../core/*.cpp) $$files($$PWD/../../gui/*.cpp)
+QTPLUGIN.imageformats = -
+QTPLUGIN.iconengines = -
