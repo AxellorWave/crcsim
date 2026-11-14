@@ -31,9 +31,8 @@ jobs:
       - name: Package
         run: |
           dir=crcsim-linux-x86_64
-          mkdir -p "$dir/docs"
+          mkdir -p "$dir"
           cp build/crcsim build/crcsim-gui README.md "$dir/"
-          cp docs/report.pdf "$dir/docs/"
           cat > "$dir/README-linux.txt" <<'TXT'
           crcsim для Linux x86_64
 
@@ -47,8 +46,6 @@ jobs:
             ./crcsim            интерактивный режим
             ./crcsim --help     параметры пакетного режима
             ./crcsim-gui        графическая версия
-
-          Отчёт: docs/report.pdf
           TXT
           tar -czf "$dir.tar.gz" "$dir"
 
