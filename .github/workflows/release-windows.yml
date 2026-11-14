@@ -47,16 +47,17 @@ jobs:
         run: |
           mkdir -p build/gui-static
           cd build/gui-static
-          /ucrt64/qt6-static/bin/qmake6 ../../packaging/windows/crcsim-gui.pro
+          /ucrt64/qt6-static/bin/qmake6 -query
+          ls /ucrt64/qt6-static/share/qt6/mkspecs | head -50
+          /ucrt64/qt6-static/bin/qmake6 -spec /ucrt64/qt6-static/share/qt6/mkspecs/win32-g++ ../../packaging/windows/crcsim-gui.pro
           mingw32-make -j4
           ls -l crcsim-gui.exe
 
       - name: stage
         run: |
           dst=stage/crcsim
-          mkdir -p "$dst/docs" dist
+          mkdir -p "$dst" dist
           cp build/crcsim.exe build/gui-static/crcsim-gui.exe README.md packaging/windows/README-windows.txt "$dst/"
-          cp docs/report.pdf "$dst/docs/"
           strip "$dst/crcsim.exe" "$dst/crcsim-gui.exe"
           find stage | sort
 
@@ -112,7 +113,7 @@ jobs:
         run: |
           Start-Process -Wait -FilePath dist\crcsim-setup.exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon'
           $app = Join-Path $env:ProgramFiles 'crcsim'
-          foreach ($f in 'crcsim-gui.exe', 'crcsim.exe', 'README.md', 'README-windows.txt', 'docs\report.pdf', 'unins000.exe') {
+          foreach ($f in 'crcsim-gui.exe', 'crcsim.exe', 'README.md', 'unins000.exe') {
             if (-not (Test-Path (Join-Path $app $f))) { Write-Error "missing $f"; exit 1 }
           }
           & (Join-Path $app 'crcsim.exe') --list-codes

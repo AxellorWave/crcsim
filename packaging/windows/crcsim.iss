@@ -38,8 +38,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\crcsim-gui.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\crcsim.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\README-windows.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\docs\report.pdf"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\crcsim"; Filename: "{app}\crcsim-gui.exe"
