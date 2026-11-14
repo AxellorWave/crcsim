@@ -13,7 +13,7 @@ from estimates import TARGET, upper_bound, verdict
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "research" / "data"
-OUT = ROOT / "research" / "out"
+OUT = ROOT / "research" / "results"
 
 FILE_BITS = 1e6
 BIT_RATE = 9600.0
@@ -245,14 +245,14 @@ def finish_figure(figure, axes_list, title):
     handles, labels = axes_list[0].get_legend_handles_labels()
     unseen = plt.Line2D([], [], color=TEXT_SECONDARY, linestyle="none", marker="v", markersize=8,
                         markerfacecolor="white", label="не наблюдалось (оценка сверху 3/N)")
-    figure.legend(handles + [unseen], labels + [unseen.get_label()], loc="lower center", ncol=4, frameon=False, fontsize=9)
+    figure.legend(handles + [unseen], labels + [unseen.get_label()], loc="lower center", ncol=2, frameon=False, fontsize=9)
     figure.suptitle(title, fontsize=11)
-    figure.tight_layout(rect=(0, 0.08, 1, 0.97))
+    figure.tight_layout(rect=(0, 0.13, 1, 0.97))
 
 
 def plot_channel(final, channel):
     lengths = [15, 31, 63]
-    figure, axes_list = plt.subplots(1, len(lengths), figsize=(11, 4), sharey=True)
+    figure, axes_list = plt.subplots(1, len(lengths), figsize=(8, 4.4), sharey=True)
     for axes, n in zip(axes_list, lengths):
         span = max_check_bits(final, n)
         for index, (color, level) in enumerate(zip(SERIES_COLORS, levels_of(final.values(), channel))):
@@ -267,7 +267,7 @@ def plot_channel(final, channel):
 
 def plot_comparison(final):
     lengths = [15, 31, 63]
-    figure, axes_list = plt.subplots(1, len(lengths), figsize=(11, 4), sharey=True)
+    figure, axes_list = plt.subplots(1, len(lengths), figsize=(8, 4.4), sharey=True)
     for axes, n in zip(axes_list, lengths):
         span = max_check_bits(final, n)
         plot_series(axes, collect_points(final, "BSC", "0.005", n), SERIES_COLORS[0], "ДСК, p = 0,005",
