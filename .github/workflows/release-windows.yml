@@ -1,0 +1,126 @@
+name: release-windows
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make
+            zip
+            unzip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-boost
+
+      - name: test
+        run: make -j test
+
+      - name: build
+        run: make -j all gui
+
+      - name: smoke
+        run: |
+          out=$(build/crcsim.exe --n 15 --g 10011 --p 0.005 --blocks 3000000 --seed 42 --csv-stdout)
+          echo "$out"
+          echo "$out" | grep -q '2782365;217615;20'
+
+      - name: stage
+        run: |
+          set -e
+          dst=stage/crcsim
+          mkdir -p "$dst/docs"
+          cp build/crcsim.exe build/crcsim-gui.exe README.md "$dst/"
+          cp docs/report.pdf "$dst/docs/"
+          deploy=$(command -v windeployqt6 || command -v windeployqt || ls /ucrt64/share/qt6/bin/windeployqt*.exe | head -n1)
+          echo "$deploy"
+          "$deploy" --release --no-translations --no-opengl-sw --no-system-d3d-compiler --compiler-runtime "$dst/crcsim-gui.exe"
+          while true; do
+            added=0
+            for f in $(find "$dst" -iname '*.exe' -o -iname '*.dll'); do
+              for dep in $(ldd "$f" | awk '{print $3}' | grep -i '^/ucrt64/' || true); do
+                name=$(basename "$dep")
+                if [ ! -f "$dst/$name" ]; then
+                  cp "$dep" "$dst/"
+                  added=1
+                fi
+              done
+            done
+            [ "$added" = 0 ] && break
+          done
+          printf '%s\r\n' \
+            'crcsim для Windows' \
+            '' \
+            'crcsim-gui.exe - графическая версия, запускается двойным щелчком.' \
+            'crcsim.exe - консольная версия, запускается из cmd или PowerShell:' \
+            '  crcsim.exe --help' \
+            '' \
+            'Консольная версия выводит текст в UTF-8 и сама переключает кодовую' \
+            'страницу консоли. Используйте терминал с поддержкой UTF-8' \
+            '(Windows Terminal, PowerShell, cmd) и шрифт с кириллицей.' \
+            '' \
+            'Отчёт: docs/report.pdf' \
+            > "$dst/README-windows.txt"
+          find stage | sort
+
+      - name: verify
+        run: |
+          set -e
+          dst=$PWD/stage/crcsim
+          bad=0
+          for f in $(find "$dst" -iname '*.exe' -o -iname '*.dll'); do
+            res=$(PATH="$dst:/usr/bin:/c/Windows/System32:/c/Windows" ldd "$f" 2>&1 || true)
+            echo "$f"
+            echo "$res"
+            if echo "$res" | grep -Eiq '/ucrt64/|not found|\?\?\?'; then
+              echo "unresolved: $f"
+              bad=1
+            fi
+          done
+          [ "$bad" = 0 ]
+
+      - name: gui smoke
+        run: |
+          cd stage/crcsim
+          PATH=/usr/bin:/c/Windows/System32:/c/Windows ./crcsim-gui.exe &
+          pid=$!
+          sleep 5
+          if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" || true
+          else
+            wait "$pid"
+          fi
+
+      - name: package
+        run: |
+          cd stage
+          zip -r -9 ../crcsim-windows-x86_64.zip crcsim
+          cd ..
+          unzip -l crcsim-windows-x86_64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crcsim-windows-x86_64
+          path: crcsim-windows-x86_64.zip
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: crcsim-windows-x86_64.zip
