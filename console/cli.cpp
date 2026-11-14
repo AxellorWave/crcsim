@@ -81,6 +81,7 @@ const std::map<std::string, FlagHandler>& flagOptions()
     static const std::map<std::string, FlagHandler> options = {
         {"--csv-stdout", [](CommandLine& c) { c.csvOutput = true; }},
         {"--quiet", [](CommandLine& c) { c.quiet = true; }},
+        {"--list-codes", [](CommandLine& c) { c.listCodes = true; }},
         {"--help", [](CommandLine& c) { c.help = true; }},
         {"-h", [](CommandLine& c) { c.help = true; }},
     };
@@ -133,6 +134,7 @@ std::string usage()
            "  --csv ФАЙЛ                  дописать строку результата в файл CSV\n"
            "  --csv-stdout                вывести на экран только CSV (заголовок и строку)\n"
            "  --quiet                     не показывать ход моделирования\n"
+           "  --list-codes                вывести таблицу образующих многочленов (n;k;t;g)\n"
            "  --help                      эта справка\n";
 }
 
