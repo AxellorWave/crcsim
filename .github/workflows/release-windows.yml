@@ -26,15 +26,16 @@ jobs:
             zip
             unzip
             mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-make
             mingw-w64-ucrt-x86_64-pkgconf
-            mingw-w64-ucrt-x86_64-qt6-base
             mingw-w64-ucrt-x86_64-boost
+            mingw-w64-ucrt-x86_64-qt6-static
 
       - name: test
         run: make -j test
 
-      - name: build
-        run: make -j all gui
+      - name: build console
+        run: make -j all
 
       - name: smoke
         run: |
@@ -42,55 +43,35 @@ jobs:
           echo "$out"
           echo "$out" | grep -q '2782365;217615;20'
 
+      - name: build gui
+        run: |
+          mkdir -p build/gui-static
+          cd build/gui-static
+          /ucrt64/qt6-static/bin/qmake6 ../../packaging/windows/crcsim-gui.pro
+          mingw32-make -j4
+          ls -l crcsim-gui.exe
+
       - name: stage
         run: |
-          set -e
           dst=stage/crcsim
-          mkdir -p "$dst/docs"
-          cp build/crcsim.exe build/crcsim-gui.exe README.md "$dst/"
+          mkdir -p "$dst/docs" dist
+          cp build/crcsim.exe build/gui-static/crcsim-gui.exe README.md packaging/windows/README-windows.txt "$dst/"
           cp docs/report.pdf "$dst/docs/"
-          deploy=$(command -v windeployqt6 || command -v windeployqt || ls /ucrt64/share/qt6/bin/windeployqt*.exe | head -n1)
-          echo "$deploy"
-          "$deploy" --release --no-translations --no-opengl-sw --no-system-d3d-compiler --compiler-runtime "$dst/crcsim-gui.exe"
-          while true; do
-            added=0
-            for f in $(find "$dst" -iname '*.exe' -o -iname '*.dll'); do
-              for dep in $(ldd "$f" | awk '{print $3}' | grep -i '^/ucrt64/' || true); do
-                name=$(basename "$dep")
-                if [ ! -f "$dst/$name" ]; then
-                  cp "$dep" "$dst/"
-                  added=1
-                fi
-              done
-            done
-            [ "$added" = 0 ] && break
-          done
-          printf '%s\r\n' \
-            'crcsim для Windows' \
-            '' \
-            'crcsim-gui.exe - графическая версия, запускается двойным щелчком.' \
-            'crcsim.exe - консольная версия, запускается из cmd или PowerShell:' \
-            '  crcsim.exe --help' \
-            '' \
-            'Консольная версия выводит текст в UTF-8 и сама переключает кодовую' \
-            'страницу консоли. Используйте терминал с поддержкой UTF-8' \
-            '(Windows Terminal, PowerShell, cmd) и шрифт с кириллицей.' \
-            '' \
-            'Отчёт: docs/report.pdf' \
-            > "$dst/README-windows.txt"
+          strip "$dst/crcsim.exe" "$dst/crcsim-gui.exe"
           find stage | sort
 
       - name: verify
         run: |
-          set -e
-          dst=$PWD/stage/crcsim
           bad=0
-          for f in $(find "$dst" -iname '*.exe' -o -iname '*.dll'); do
-            res=$(PATH="$dst:/usr/bin:/c/Windows/System32:/c/Windows" ldd "$f" 2>&1 || true)
+          for f in stage/crcsim/crcsim.exe stage/crcsim/crcsim-gui.exe; do
+            res=$(PATH=/usr/bin:/c/Windows/System32:/c/Windows ldd "$f" 2>&1 || true)
             echo "$f"
             echo "$res"
-            if echo "$res" | grep -Eiq '/ucrt64/|not found|\?\?\?'; then
-              echo "unresolved: $f"
+            if echo "$res" | awk '{print $3}' | grep -v -i '^/c/windows/' | grep -q .; then
+              echo "non-system dependency: $f"
+              bad=1
+            fi
+            if echo "$res" | grep -Eiq 'not found|\?\?\?'; then
               bad=1
             fi
           done
@@ -99,7 +80,7 @@ jobs:
       - name: gui smoke
         run: |
           cd stage/crcsim
-          PATH=/usr/bin:/c/Windows/System32:/c/Windows QT_FORCE_STDERR_LOGGING=1 QT_DEBUG_PLUGINS=1 ./crcsim-gui.exe 2> ../gui.log &
+          PATH=/usr/bin:/c/Windows/System32:/c/Windows QT_FORCE_STDERR_LOGGING=1 ./crcsim-gui.exe 2> ../gui.log &
           pid=$!
           sleep 5
           alive=0
@@ -107,22 +88,50 @@ jobs:
           kill "$pid" 2>/dev/null || true
           cat ../gui.log
           [ "$alive" = 1 ]
-          grep -q 'qwindows' ../gui.log
           ! grep -qi 'could not' ../gui.log
 
       - name: package
         run: |
+          cp stage/crcsim/crcsim.exe stage/crcsim/crcsim-gui.exe dist/
           cd stage
-          zip -r -9 ../crcsim-windows-x86_64.zip crcsim
+          zip -r -9 ../dist/crcsim-windows-x86_64.zip crcsim
           cd ..
-          unzip -l crcsim-windows-x86_64.zip
+          unzip -l dist/crcsim-windows-x86_64.zip
+
+      - name: installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$PWD\stage\crcsim" "/DOutputDir=$PWD\dist" packaging\windows\crcsim.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: installer smoke
+        shell: pwsh
+        run: |
+          Start-Process -Wait -FilePath dist\crcsim-setup.exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon'
+          $app = Join-Path $env:ProgramFiles 'crcsim'
+          foreach ($f in 'crcsim-gui.exe', 'crcsim.exe', 'README.md', 'README-windows.txt', 'docs\report.pdf', 'unins000.exe') {
+            if (-not (Test-Path (Join-Path $app $f))) { Write-Error "missing $f"; exit 1 }
+          }
+          & (Join-Path $app 'crcsim.exe') --list-codes
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Start-Process -Wait -FilePath (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          Start-Sleep -Seconds 3
+          if (Test-Path (Join-Path $app 'crcsim-gui.exe')) { Write-Error 'uninstall failed'; exit 1 }
+          Get-ChildItem dist | Format-Table Name, Length
 
       - uses: actions/upload-artifact@v5
         with:
-          name: crcsim-windows-x86_64
-          path: crcsim-windows-x86_64.zip
+          name: crcsim-windows
+          path: dist/*
 
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: crcsim-windows-x86_64.zip
+          files: |
+            dist/crcsim-gui.exe
+            dist/crcsim.exe
+            dist/crcsim-setup.exe
+            dist/crcsim-windows-x86_64.zip
