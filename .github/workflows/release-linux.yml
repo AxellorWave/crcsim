@@ -1,0 +1,83 @@
+name: Release Linux
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ make pkg-config qt6-base-dev qt6-base-dev-tools libboost-test-dev imagemagick
+
+      - name: Test
+        run: make -j"$(nproc)" test
+
+      - name: Build
+        run: |
+          make -j"$(nproc)" LDFLAGS=-static all
+          make -j"$(nproc)" gui
+          ./build/crcsim --n 15 --g 10011 --p 0.005 --blocks 100000 --seed 42 --csv-stdout
+
+      - name: Package
+        run: |
+          dir=crcsim-linux-x86_64
+          mkdir -p "$dir/docs"
+          cp build/crcsim build/crcsim-gui README.md "$dir/"
+          cp docs/report.pdf "$dir/docs/"
+          cat > "$dir/README-linux.txt" <<'TXT'
+          crcsim для Linux x86_64
+
+          crcsim      консольная версия, собрана статически, запускается без зависимостей.
+          crcsim-gui  графическая версия, требует библиотеки Qt 6.
+
+          Установка Qt 6 в Debian/Ubuntu:
+            sudo apt install libqt6widgets6
+
+          Запуск:
+            ./crcsim            интерактивный режим
+            ./crcsim --help     параметры пакетного режима
+            ./crcsim-gui        графическая версия
+
+          Отчёт: docs/report.pdf
+          TXT
+          tar -czf "$dir.tar.gz" "$dir"
+
+      - name: AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          QMAKE: /usr/bin/qmake6
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy-*.AppImage
+          printf '[Desktop Entry]\nType=Application\nName=crcsim\nExec=crcsim-gui\nIcon=crcsim\nCategories=Education;Science;\n' > crcsim.desktop
+          convert -size 256x256 xc:'#2b6cb0' crcsim.png
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --executable build/crcsim-gui --desktop-file crcsim.desktop --icon-file crcsim.png --plugin qt --output appimage
+          mv crcsim*x86_64.AppImage crcsim-gui-x86_64.AppImage
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: crcsim-linux-x86_64
+          path: |
+            crcsim-linux-x86_64.tar.gz
+            crcsim-gui-x86_64.AppImage
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          files: |
+            crcsim-linux-x86_64.tar.gz
+            crcsim-gui-x86_64.AppImage
