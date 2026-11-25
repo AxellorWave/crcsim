@@ -1,6 +1,7 @@
 #include "analysis_panel.h"
 
 #include "analysis_plot.h"
+#include "help_button.h"
 #include "input_parsing.h"
 #include "probability_format.h"
 
@@ -13,6 +14,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace {
@@ -127,13 +129,14 @@ QWidget* AnalysisPanel::createSummaryColumn()
 QWidget* AnalysisPanel::createPlotColumn()
 {
     probabilityEdit_->setMaximumWidth(110);
-    probabilityEdit_->setToolTip(QStringLiteral("Вероятность ошибки на бит в ДСК, (0; 0,5]"));
+    probabilityEdit_->setToolTip(parameterHelpToolTip(HelpTopic::AnalysisProbability));
     probabilityLabel_->setTextFormat(Qt::RichText);
     probabilityLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     auto* probabilityRow = new QHBoxLayout;
     probabilityRow->addWidget(new QLabel(QStringLiteral("p =")));
     probabilityRow->addWidget(probabilityEdit_);
+    probabilityRow->addWidget(createHelpButton(HelpTopic::AnalysisProbability));
     probabilityRow->addWidget(probabilityLabel_, 1);
 
     auto* column = new QWidget;

@@ -1,0 +1,340 @@
+#include "user_guide.h"
+
+#include <QStringList>
+
+#include <vector>
+
+namespace {
+
+struct GuideSection {
+    QString anchor;
+    QString title;
+    QString body;
+};
+
+QString text(const char* utf8)
+{
+    return QString::fromUtf8(utf8);
+}
+
+QString plannedNote()
+{
+    return text(R"(<table class="note" width="100%" cellpadding="10"><tr><td>
+Возможность в разработке. Если в вашей версии программы её ещё нет, она появится в одном из следующих выпусков.
+</td></tr></table>)");
+}
+
+GuideSection purposeSection()
+{
+    return {QStringLiteral("purpose"), QStringLiteral("Назначение программы"), text(R"(
+<p>Программа исследует циклические коды (CRC) в режиме <b>обнаружения</b> ошибок. Она передаёт по модели канала
+связи случайные блоки данных, защищённые выбранным кодом, и считает, чем закончилась передача каждого блока:</p>
+<ul>
+<li><b>принят верно</b> — канал не исказил ни одного бита;</li>
+<li><b>ошибка обнаружена</b> — биты искажены, и декодер это заметил, блок можно запросить повторно;</li>
+<li><b>ложный приём</b> — биты искажены, но искажение превратило блок в другое кодовое слово, и декодер его пропустил.</li>
+</ul>
+<p>Так можно сравнить коды между собой и выбрать подходящий для заданного уровня помех. Главный показатель
+качества кода — вероятность ложного приёма P<sub>лож</sub>; в лабораторной работе требуется P<sub>лож</sub> ≤ 10⁻⁶.</p>
+)")};
+}
+
+GuideSection stepsSection()
+{
+    return {QStringLiteral("steps"), QStringLiteral("Опыт за 4 шага"), text(R"(
+<table class="steps" width="100%" cellpadding="8" cellspacing="0">
+<tr><td class="num">1</td><td><b>Выберите код</b> в панели «Кодирование» — из списка или введите длину n и
+многочлен g(x). Число проверочных бит h, число бит данных k и избыточность I программа посчитает сама.</td></tr>
+<tr><td class="num">2</td><td><b>Задайте канал</b> в панели «Канал связи»: ДСК с вероятностью ошибки p или канал
+Гилберта с четырьмя вероятностями. Для канала Гилберта ниже показываются средняя вероятность ошибки и средняя длина пачки.</td></tr>
+<tr><td class="num">3</td><td><b>Задайте длительность опыта</b> в панели «Управление моделированием»: число блоков N
+или остановку по числу ошибочных блоков, а для повторяемого результата — seed.</td></tr>
+<tr><td class="num">4</td><td><b>Нажмите «Старт».</b> Индикатор показывает ход опыта, «Стоп» прерывает его.
+По окончании в таблицу добавляется строка результатов, а в строке состояния — итог опыта.</td></tr>
+</table>
+<p>Рядом с каждым полем есть кнопка <span class="key">?</span> — она открывает короткую справку по параметру.
+Та же справка появляется при наведении мыши на поле.</p>
+)")};
+}
+
+GuideSection parametersSection()
+{
+    return {QStringLiteral("parameters"), QStringLiteral("Параметры"), text(R"(
+<p>Параметры разбиты на три группы — по панелям слева. Дробные числа можно вводить и с запятой, и с точкой.</p>
+<h3>Кодирование</h3>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="22%">Параметр</th><th width="40%">Смысл</th><th>Допустимые значения</th></tr>
+<tr><td>Код</td><td>готовый код из таблицы методички: (n, k), t и g(x)</td><td>любой из списка или «Свой многочлен»</td></tr>
+<tr><td>Длина n</td><td>число бит в кодовом слове</td><td>целое от 3 до 64</td></tr>
+<tr><td>g(x)</td><td>образующий многочлен</td><td><code>10011</code> или <code>[4;1;0]</code>; первый и последний
+коэффициенты равны 1, старшая степень меньше n</td></tr>
+</table>
+<h3>Канал связи</h3>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="22%">Параметр</th><th width="40%">Смысл</th><th>Допустимые значения</th></tr>
+<tr><td>Модель</td><td>ДСК или канал Гилберта</td><td>выбор из списка</td></tr>
+<tr><td>p</td><td>ДСК: вероятность искажения бита</td><td>0 &lt; p ≤ 0,5</td></tr>
+<tr><td>P_ХП</td><td>Гилберт: переход «хорошее → плохое»</td><td>0 &lt; P_ХП &lt; 1</td></tr>
+<tr><td>P_ПХ</td><td>Гилберт: переход «плохое → хорошее»</td><td>0 &lt; P_ПХ &lt; 1</td></tr>
+<tr><td>p_П</td><td>Гилберт: ошибка бита в плохом состоянии</td><td>0 &lt; p_П ≤ 0,5</td></tr>
+<tr><td>p_Х</td><td>Гилберт: ошибка бита в хорошем состоянии</td><td>0 ≤ p_Х ≤ 0,5</td></tr>
+</table>
+<h3>Управление моделированием</h3>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="22%">Параметр</th><th width="40%">Смысл</th><th>Допустимые значения</th></tr>
+<tr><td>Остановка</td><td>когда заканчивать опыт</td><td>по числу блоков N или по числу ошибочных блоков</td></tr>
+<tr><td>Число блоков N</td><td>сколько блоков передать; при остановке по ошибкам поле называется «Не более N блоков»</td>
+<td>целое от 1 до 1 000 000 000</td></tr>
+<tr><td>Ошибочных блоков</td><td>порог N<sub>обн</sub> + N<sub>лож</sub> для остановки</td><td>целое от 1 до 1 000 000 000</td></tr>
+<tr><td>Seed</td><td>начальное значение генератора случайных чисел</td><td>целое неотрицательное; пусто или 0 — случайное</td></tr>
+</table>
+<p>Чтобы проверить требование P<sub>лож</sub> ≤ 10⁻⁶, передайте не меньше 3 000 000 блоков: тогда даже опыт без
+единого ложного приёма даёт оценку P<sub>лож</sub> &lt; 3/N = 10⁻⁶.</p>
+)")};
+}
+
+GuideSection channelsSection()
+{
+    return {QStringLiteral("channels"), QStringLiteral("Модели канала"), text(R"(
+<h3>ДСК — двоичный симметричный канал</h3>
+<p>Каждый бит искажается с одной и той же вероятностью p независимо от соседей. Это модель «ровного» шума.
+Вероятность, что блок из n бит дойдёт без искажений, равна</p>
+<p class="formula">P<sub>в</sub> = (1 − p)<sup>n</sup></p>
+<h3>Канал Гилберта</h3>
+<p>Канал бывает в двух состояниях: <b>хорошем</b> (ошибок почти нет) и <b>плохом</b> (ошибки идут часто). После
+каждого бита канал может сменить состояние: с вероятностью P_ХП перейти из хорошего в плохое и с вероятностью
+P_ПХ вернуться обратно. Внутри состояния биты искажаются с вероятностями p_Х и p_П. Так получаются <b>пачки</b>
+ошибок — как при грозовом разряде или замирании сигнала.</p>
+<p>Доли времени в хорошем и плохом состоянии:</p>
+<p class="formula">P<sub>П</sub> = P_ХП / (P_ХП + P_ПХ),&nbsp;&nbsp; P<sub>Х</sub> = 1 − P<sub>П</sub></p>
+<p>Средняя вероятность ошибки на бит, которая сравнима с p в ДСК:</p>
+<p class="formula">p = p<sub>Х</sub>·P<sub>Х</sub> + p<sub>П</sub>·P<sub>П</sub></p>
+<p>Средняя длина пачки — сколько бит подряд канал в среднем остаётся в плохом состоянии:</p>
+<p class="formula">L<sub>пачки</sub> = 1/P<sub>ПХ</sub></p>
+<p>С параметрами по умолчанию (P_ХП = 0,001; P_ПХ = 0,1; p_П = 0,5; p_Х = 0) средняя вероятность ошибки
+p ≈ 0,005, а пачки длятся в среднем 10 бит. Все три величины программа показывает под полями канала.</p>
+)")};
+}
+
+GuideSection resultsSection()
+{
+    return {QStringLiteral("results"), QStringLiteral("Как читать результаты"), text(R"(
+<p>Каждый опыт добавляет строку в таблицу на вкладке «Моделирование». Над таблицей во время опыта меняются счётчики.</p>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="22%">Столбец</th><th>Значение</th></tr>
+<tr><td>n, k, g(x)</td><td>параметры кода; подсказка к g(x) показывает список степеней</td></tr>
+<tr><td>Канал, p</td><td>ДСК или Гилберт и средняя вероятность ошибки на бит</td></tr>
+<tr><td>N</td><td>сколько блоков передано</td></tr>
+<tr><td>N<sub>в</sub>, P<sub>в</sub></td><td>блоки, принятые без искажений, и их доля N<sub>в</sub>/N</td></tr>
+<tr><td>N<sub>обн</sub>, P<sub>обн</sub></td><td>искажённые блоки, которые декодер обнаружил, — их можно запросить повторно</td></tr>
+<tr><td>N<sub>лож</sub>, P<sub>лож</sub></td><td>искажённые блоки, которые декодер пропустил, — <b>главный показатель качества кода</b></td></tr>
+<tr><td>I</td><td>избыточность (n − k)/n — какая доля передаваемых бит служит для проверки</td></tr>
+</table>
+<p>Всегда N = N<sub>в</sub> + N<sub>обн</sub> + N<sub>лож</sub>, а сумма трёх вероятностей равна 1.</p>
+<h3>Прочерк вместо вероятности</h3>
+<p>Прочерк «—» означает, что событие за опыт ни разу не произошло. Ноль здесь был бы неверен: событие возможно,
+просто опыт был недостаточно долгим. Наведите мышь на прочерк — появится оценка сверху по <b>правилу трёх</b>:
+с доверием 95 %</p>
+<p class="formula">P &lt; 3/N</p>
+<p>Например, при N = 3 000 000 и N<sub>лож</sub> = 0 получаем P<sub>лож</sub> &lt; 10⁻⁶.</p>
+<h3>Строка состояния</h3>
+<p>После опыта под счётчиками выводятся: использованный seed, измеренная доля искажённых бит, среднее число
+попыток передачи блока L = N/N<sub>в</sub> и для ДСК — теоретическое значение P<sub>в</sub> = (1 − p)<sup>n</sup>
+для сравнения с измеренным. Если опыт прерван кнопкой «Стоп», строка всё равно попадает в таблицу, а в подсказке к N
+отмечено, что моделирование прервано.</p>
+)")};
+}
+
+GuideSection csvSection()
+{
+    return {QStringLiteral("csv"), QStringLiteral("Сохранение в CSV"), text(R"(
+<p>Кнопка «Сохранить в CSV» записывает все строки таблицы в файл, который открывается в Excel или LibreOffice Calc.
+Разделитель столбцов — точка с запятой, дробная часть отделяется точкой, прочерк записывается как <code>-</code>.
+Кнопка «Очистить» удаляет строки из таблицы.</p>
+<pre>n;k;g;channel;p;N;Nv;Nobn;Nlozh;Pv;Pobn;Plozh;I
+15;11;10011;BSC;0.005;3000000;2782365;217615;20;0.9275;0.07254;6.667e-06;0.267</pre>
+)")};
+}
+
+GuideSection analysisSection()
+{
+    return {QStringLiteral("analysis"), QStringLiteral("Вкладка «Анализ кода»"), text(R"(
+<p>Вкладка считает свойства выбранного кода без моделирования — точно, а не по случайной выборке. Нажмите
+«Рассчитать»: программа переберёт 2<sup>min(k, h)</sup> слов кода или дуального кода. Для длинных кодов это занимает
+несколько секунд; при min(k, h) &gt; 30 расчёт недоступен.</p>
+<ul>
+<li><b>Весовой спектр A<sub>w</sub></b> — сколько кодовых слов имеют вес w (число единиц). Ложный приём происходит,
+когда вектор ошибок сам совпадает с ненулевым кодовым словом.</li>
+<li><b>Кодовое расстояние d</b> — наименьший вес ненулевого кодового слова. Код гарантированно обнаруживает любую
+ошибку кратности до d − 1 и любую пачку ошибок длиной до h бит.</li>
+<li><b>Точная P<sub>лож</sub> в ДСК</b> по формуле</li>
+</ul>
+<p class="formula">P<sub>лож</sub>(p) = Σ A<sub>w</sub> p<sup>w</sup> (1 − p)<sup>n − w</sup></p>
+<p>Поле «p =» задаёт вероятность ошибки, для которой выводится число и проверка требования P<sub>лож</sub> ≤ 10⁻⁶.
+<b>График</b> показывает P<sub>лож</sub>(p) в логарифмическом масштабе. На него наносятся опыты из таблицы с этим же
+кодом на ДСК: точки — измеренная P<sub>лож</sub>, треугольники — оценка 3/N для опытов без ложных приёмов.</p>
+<p>Для кодов с min(k, h) ≤ 22 подсказка к ячейке P<sub>лож</sub> в таблице результатов сразу показывает теоретическое
+значение, для остальных — после расчёта на вкладке.</p>
+)")};
+}
+
+GuideSection batchSection()
+{
+    return {QStringLiteral("batch"), QStringLiteral("Пакетная обработка"), text(R"(
+<p>Пакетная обработка выполняет сразу несколько опытов подряд без ручного ввода параметров. План опытов можно
+импортировать из файла CSV или JSON, где каждая строка или запись задаёт код, канал и длительность опыта.</p>
+<p>Есть и встроенный план из методички: все коды таблицы 3.1 при p = 0,05; 0,01 и 0,005. После запуска программа
+проводит опыты по очереди, а их результаты попадают в общую таблицу и сохраняются в CSV как обычно.</p>
+)") + plannedNote()};
+}
+
+GuideSection codeChoiceSection()
+{
+    return {QStringLiteral("choice"), QStringLiteral("Подбор кода"), text(R"(
+<p>Подбор кода прогоняет все коды выбранной длины n на текущем канале и сравнивает их. Из кодов, которые
+удовлетворяют требованию P<sub>лож</sub> ≤ 10⁻⁶, подсвечивается лучший — с наименьшей избыточностью I и
+наименьшим временем передачи файла T<sub>ф</sub>.</p>
+)") + plannedNote()};
+}
+
+GuideSection walkthroughSection()
+{
+    return {QStringLiteral("walkthrough"), QStringLiteral("Разбор блока"), text(R"(
+<p>Разбор блока показывает путь одного блока по шагам в виде анимации: кодирование (деление сообщения на g(x)
+и дописывание остатка), прохождение канала с отметкой искажённых бит и проверку на приёме делением на g(x).
+По остатку видно, будет ли ошибка обнаружена или произойдёт ложный приём.</p>
+)") + plannedNote()};
+}
+
+GuideSection fileTimeSection()
+{
+    return {QStringLiteral("filetime"), QStringLiteral("Время передачи файла Tф"), text(R"(
+<p>Время передачи файла учитывает и избыточность кода, и повторные передачи блоков с обнаруженными ошибками:</p>
+<p class="formula">T<sub>ф</sub> = (M/k) · n · T · L</p>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="22%">Величина</th><th>Смысл</th></tr>
+<tr><td>M</td><td>объём файла в битах — задаётся полем M</td></tr>
+<tr><td>M/k</td><td>сколько блоков нужно, чтобы передать файл</td></tr>
+<tr><td>n · T</td><td>время передачи одного блока; T = 1/скорость — длительность бита, скорость задаётся полем в бит/с</td></tr>
+<tr><td>L</td><td>среднее число попыток на блок, L = N/N<sub>в</sub> по результатам опыта</td></tr>
+</table>
+<p>Короткий код с малой избыточностью передаёт меньше лишних бит, но при сильных помехах чаще требует повторов —
+T<sub>ф</sub> помогает найти баланс.</p>
+)") + plannedNote()};
+}
+
+GuideSection consoleSection()
+{
+    return {QStringLiteral("console"), QStringLiteral("Консольная версия"), text(R"(
+<p>Программа <code>crcsim</code> без аргументов задаёт вопросы по очереди — те же три группы параметров.
+С аргументами она работает без вопросов, что удобно для серий опытов и скриптов.</p>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="30%">Аргумент</th><th>Назначение</th></tr>
+<tr><td><code>--n</code>, <code>--g</code></td><td>длина кода (3…64) и многочлен g(x): <code>10011</code> или <code>[4;1;0]</code></td></tr>
+<tr><td><code>--channel bsc|gilbert</code></td><td>модель канала, по умолчанию ДСК</td></tr>
+<tr><td><code>--p</code></td><td>ДСК: вероятность ошибки на бит</td></tr>
+<tr><td><code>--p-gb</code>, <code>--p-bg</code></td><td>Гилберт: P_ХП и P_ПХ</td></tr>
+<tr><td><code>--p-bad</code>, <code>--p-good</code></td><td>Гилберт: p_П и p_Х</td></tr>
+<tr><td><code>--blocks</code></td><td>число блоков N; вместе с <code>--errors</code> — предельное число блоков</td></tr>
+<tr><td><code>--errors</code></td><td>остановка после заданного числа ошибочных блоков</td></tr>
+<tr><td><code>--seed</code></td><td>начальное значение генератора, 0 — случайное</td></tr>
+<tr><td><code>--analyze</code></td><td>анализ кода: спектр, d, гарантии и точная P<sub>лож</sub> при p из <code>--p</code></td></tr>
+<tr><td><code>--csv ФАЙЛ</code></td><td>дописать строку результата в файл CSV</td></tr>
+<tr><td><code>--csv-stdout</code></td><td>вывести на экран только CSV</td></tr>
+<tr><td><code>--quiet</code></td><td>не показывать ход моделирования</td></tr>
+<tr><td><code>--list-codes</code></td><td>вывести таблицу образующих многочленов</td></tr>
+<tr><td><code>--help</code></td><td>полный список аргументов</td></tr>
+</table>
+<p>Пример — код (15, 11) на ДСК с выводом в CSV:</p>
+<pre>crcsim --n 15 --g 10011 --p 0.005 --blocks 3000000 --seed 42 --csv-stdout</pre>
+)")};
+}
+
+GuideSection errorsSection()
+{
+    return {QStringLiteral("errors"), QStringLiteral("Сообщения об ошибках ввода"), text(R"(
+<p>Параметры проверяются сразу при вводе. Если значение недопустимо, поле обводится красным, кнопка «Старт»
+блокируется, а под панелями красным текстом выводится причина. Как только значение исправлено, сообщение исчезает.</p>
+<table class="grid" width="100%" cellpadding="6" cellspacing="0">
+<tr><th width="48%">Сообщение</th><th>Что сделать</th></tr>
+<tr><td>n должно быть целым числом от 3 до 64</td><td>задайте длину в допустимых пределах</td></tr>
+<tr><td>g(x): в двоичной записи допустимы только символы 0 и 1</td><td>уберите лишние символы или используйте запись <code>[4;1;0]</code></td></tr>
+<tr><td>g(x): первый (старший) коэффициент должен быть равен 1</td><td>уберите ведущие нули</td></tr>
+<tr><td>свободный член (последний коэффициент) g(x) должен быть равен 1</td><td>многочлен должен оканчиваться на 1, в списке степеней должна быть степень 0</td></tr>
+<tr><td>старшая степень g(x) должна быть меньше n</td><td>увеличьте n или выберите многочлен меньшей степени</td></tr>
+<tr><td>p: введите число (например, 0,005 или 0.005)</td><td>в поле вероятности должно быть одно число</td></tr>
+<tr><td>p должна быть в интервале (0; 0,5]</td><td>аналогичные сообщения выводятся для P_ХП, P_ПХ, p_П и p_Х со своими интервалами</td></tr>
+<tr><td>N: введите целое положительное число</td><td>число блоков вводится без дробной части; пробелы между разрядами допустимы</td></tr>
+<tr><td>число блоков N должно быть от 1 до 1 000 000 000</td><td>уменьшите N или используйте остановку по числу ошибочных блоков</td></tr>
+<tr><td>seed: введите целое неотрицательное число или оставьте поле пустым</td><td>пустое поле означает случайный seed</td></tr>
+</table>
+<p>Если моделирование или сохранение файла завершилось неудачно, программа покажет окно с описанием ошибки,
+а уже полученные результаты останутся в таблице.</p>
+)")};
+}
+
+std::vector<GuideSection> guideSections()
+{
+    return {purposeSection(), stepsSection(), parametersSection(), channelsSection(), resultsSection(), csvSection(),
+        analysisSection(), batchSection(), codeChoiceSection(), walkthroughSection(), fileTimeSection(),
+        consoleSection(), errorsSection()};
+}
+
+QString tableOfContents(const std::vector<GuideSection>& sections)
+{
+    QString items;
+    for (const GuideSection& section : sections)
+        items += QStringLiteral("<li><a href=\"#%1\">%2</a></li>").arg(section.anchor, section.title);
+    return QStringLiteral("<table class=\"toc\" width=\"100%\" cellpadding=\"14\"><tr><td>"
+                          "<p class=\"tocTitle\">Содержание</p><ol>%1</ol></td></tr></table>")
+        .arg(items);
+}
+
+QString sectionHtml(const GuideSection& section)
+{
+    return QStringLiteral("<a name=\"%1\"></a><h2>%2</h2>%3<p class=\"top\"><a href=\"#top\">↑ к содержанию</a></p>")
+        .arg(section.anchor, section.title, section.body);
+}
+
+}
+
+QString userGuideStyleSheet()
+{
+    return text(R"(
+body { color: #14213D; font-size: 11pt; }
+h1 { color: #14213D; font-size: 20pt; font-weight: 600; margin-bottom: 4px; }
+h2 { color: #2a78d6; font-size: 15pt; font-weight: 600; margin-top: 26px; margin-bottom: 8px; }
+h3 { color: #14213D; font-size: 12pt; font-weight: 600; margin-top: 14px; margin-bottom: 4px; }
+p { color: #4A5568; margin-top: 4px; margin-bottom: 6px; line-height: 135%; }
+li { color: #4A5568; margin-bottom: 3px; }
+a { color: #2a78d6; text-decoration: none; }
+b { color: #14213D; }
+code { color: #14213D; background-color: #eef2f7; font-family: monospace; }
+pre { color: #14213D; background-color: #f4f6fa; font-family: monospace; font-size: 10pt; }
+.lead { color: #4A5568; font-size: 12pt; }
+.formula { color: #14213D; font-size: 13pt; margin-left: 24px; }
+.top { font-size: 9pt; margin-top: 10px; }
+.key { color: #2a78d6; font-weight: 600; }
+table.toc { background-color: #f1f6fd; border: 0; }
+.tocTitle { color: #14213D; font-size: 12pt; font-weight: 600; margin: 0; }
+table.grid { border-collapse: collapse; border: 1px solid #d5dce6; margin-top: 4px; margin-bottom: 8px; }
+table.grid th { background-color: #eaf2fc; color: #14213D; font-weight: 600; text-align: left; border: 1px solid #d5dce6; }
+table.grid td { color: #4A5568; border: 1px solid #d5dce6; }
+table.steps td { color: #4A5568; border-bottom: 1px solid #e4e9f0; }
+td.num { color: #eb6834; font-size: 18pt; font-weight: 600; width: 36px; }
+table.note { background-color: #fdf0ea; color: #8a3a16; margin-top: 6px; }
+)");
+}
+
+QString userGuideHtml()
+{
+    const std::vector<GuideSection> sections = guideSections();
+    QStringList parts;
+    parts.append(text(R"(<a name="top"></a><h1>Руководство пользователя</h1>
+<p class="lead">Исследование циклических кодов в режиме обнаружения ошибок: как задать опыт, что означают параметры
+и как читать результаты.</p>)"));
+    parts.append(tableOfContents(sections));
+    for (const GuideSection& section : sections)
+        parts.append(sectionHtml(section));
+    return QStringLiteral("<html><body>") + parts.join(QString()) + QStringLiteral("</body></html>");
+}

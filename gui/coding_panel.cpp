@@ -1,5 +1,7 @@
 #include "coding_panel.h"
 
+#include "help_button.h"
+
 #include "codes.h"
 #include "poly.h"
 #include "results.h"
@@ -49,16 +51,13 @@ CodingPanel::CodingPanel(QWidget* parent)
 
     fillCodeList();
     lengthSpin_->setRange(crc::minCodeLength, crc::maxCodeLength);
-    lengthSpin_->setToolTip(QStringLiteral("Длина кодового слова n, бит (от 3 до 64)"));
-    generatorEdit_->setToolTip(
-        QStringLiteral("Образующий многочлен: двоичная запись (10011) или список степеней ([4;1;0])"));
     generatorEdit_->setPlaceholderText(QStringLiteral("10011 или [4;1;0]"));
     derivedLabel_->setWordWrap(true);
 
     auto* layout = new QFormLayout(this);
-    layout->addRow(QStringLiteral("Код:"), codeCombo_);
-    layout->addRow(QStringLiteral("Длина n:"), lengthSpin_);
-    layout->addRow(QStringLiteral("g(x):"), generatorEdit_);
+    layout->addRow(QStringLiteral("Код:"), withHelpButton(codeCombo_, HelpTopic::Code));
+    layout->addRow(QStringLiteral("Длина n:"), withHelpButton(lengthSpin_, HelpTopic::CodeLength));
+    layout->addRow(QStringLiteral("g(x):"), withHelpButton(generatorEdit_, HelpTopic::Generator));
     layout->addRow(QStringLiteral("Расчёт:"), derivedLabel_);
 
     const crc::CodingParams defaults;

@@ -7,6 +7,7 @@
 #include "model_diagram.h"
 #include "results_table.h"
 #include "run_report.h"
+#include "user_guide_view.h"
 
 #include "results.h"
 
@@ -86,6 +87,7 @@ QWidget* MainWindow::createRunColumn()
     tabs_->setObjectName(QStringLiteral("resultTabs"));
     tabs_->addTab(createSimulationTab(), QStringLiteral("Моделирование"));
     tabs_->addTab(analysisPanel_, QStringLiteral("Анализ кода"));
+    tabs_->addTab(createUserGuideView(), QStringLiteral("Руководство"));
     return tabs_;
 }
 
