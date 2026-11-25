@@ -1,6 +1,7 @@
 #pragma once
 
 #include "field_error.h"
+#include "parameter_help.h"
 
 #include "params.h"
 
@@ -33,7 +34,7 @@ private:
     };
 
     QLineEdit* addProbabilityEdit(QFormLayout* layout, const QString& label, const QString& objectName, double value,
-        const QString& toolTip);
+        HelpTopic topic);
     QWidget* createBscPage();
     QWidget* createGilbertPage();
     void showPage(int index);

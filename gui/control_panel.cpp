@@ -1,5 +1,6 @@
 #include "control_panel.h"
 
+#include "help_button.h"
 #include "input_parsing.h"
 
 #include <QComboBox>
@@ -21,18 +22,13 @@ ControlPanel::ControlPanel(QWidget* parent)
     blockLimitEdit_ = createEdit(QStringLiteral("blockLimitEdit"), formatCount(defaults.blockLimit));
     errorLimitEdit_ = createEdit(QStringLiteral("errorLimitEdit"), formatCount(defaults.errorLimit));
     seedEdit_ = createEdit(QStringLiteral("seedEdit"), QString());
-    blockLimitEdit_->setToolTip(QStringLiteral("Число передаваемых блоков, от 1 до 1 000 000 000"));
-    errorLimitEdit_->setToolTip(QStringLiteral("Моделирование остановится, когда наберётся столько ошибочных блоков"));
     seedEdit_->setPlaceholderText(QStringLiteral("случайное"));
-    seedEdit_->setToolTip(
-        QStringLiteral("Начальное значение генератора случайных чисел.\nПусто или 0 — выбрать случайно; "
-                       "одинаковое значение повторяет опыт."));
 
     auto* layout = new QFormLayout(this);
-    layout->addRow(QStringLiteral("Остановка:"), stopModeCombo_);
-    layout->addRow(blockLimitLabel_, blockLimitEdit_);
-    layout->addRow(QStringLiteral("Ошибочных блоков:"), errorLimitEdit_);
-    layout->addRow(QStringLiteral("Seed:"), seedEdit_);
+    layout->addRow(QStringLiteral("Остановка:"), withHelpButton(stopModeCombo_, HelpTopic::StopMode));
+    layout->addRow(blockLimitLabel_, withHelpButton(blockLimitEdit_, HelpTopic::BlockLimit));
+    layout->addRow(QStringLiteral("Ошибочных блоков:"), withHelpButton(errorLimitEdit_, HelpTopic::ErrorLimit));
+    layout->addRow(QStringLiteral("Seed:"), withHelpButton(seedEdit_, HelpTopic::Seed));
 
     updateStopMode();
     connect(stopModeCombo_, &QComboBox::currentIndexChanged, this, [this] {

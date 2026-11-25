@@ -1,5 +1,6 @@
 #include "channel_panel.h"
 
+#include "help_button.h"
 #include "input_parsing.h"
 
 #include "results.h"
@@ -38,7 +39,7 @@ ChannelPanel::ChannelPanel(QWidget* parent)
     pages_->addWidget(createGilbertPage());
 
     auto* kindLayout = new QFormLayout;
-    kindLayout->addRow(QStringLiteral("Модель:"), kindCombo_);
+    kindLayout->addRow(QStringLiteral("Модель:"), withHelpButton(kindCombo_, HelpTopic::ChannelModel));
     auto* layout = new QVBoxLayout(this);
     layout->addLayout(kindLayout);
     layout->addWidget(pages_);
@@ -72,12 +73,11 @@ void ChannelPanel::notifyChanged()
 }
 
 QLineEdit* ChannelPanel::addProbabilityEdit(
-    QFormLayout* layout, const QString& label, const QString& objectName, double value, const QString& toolTip)
+    QFormLayout* layout, const QString& label, const QString& objectName, double value, HelpTopic topic)
 {
     auto* edit = new QLineEdit(QString::fromStdString(crc::formatNumber(value, 6)).replace(QLatin1Char('.'), QLatin1Char(',')));
     edit->setObjectName(objectName);
-    edit->setToolTip(toolTip);
-    layout->addRow(label, edit);
+    layout->addRow(label, withHelpButton(edit, topic));
     connect(edit, &QLineEdit::textChanged, this, [this] { notifyChanged(); });
     return edit;
 }
@@ -89,7 +89,7 @@ QWidget* ChannelPanel::createBscPage()
     layout->setContentsMargins(0, 0, 0, 0);
     const crc::BscSettings defaults;
     bitErrorEdit_ = addProbabilityEdit(layout, QStringLiteral("Вероятность ошибки p:"), QStringLiteral("bitErrorEdit"),
-        defaults.bitErrorProbability, QStringLiteral("Вероятность искажения одного бита, интервал (0; 0,5]"));
+        defaults.bitErrorProbability, HelpTopic::BitErrorProbability);
     return page;
 }
 
@@ -101,16 +101,16 @@ QWidget* ChannelPanel::createGilbertPage()
     const crc::GilbertSettings defaults;
     goodToBadEdit_ = addProbabilityEdit(layout, QStringLiteral("P_ХП (хорошее → плохое):"),
         QStringLiteral("goodToBadEdit"), defaults.goodToBad,
-        QStringLiteral("Вероятность перехода из хорошего состояния в плохое за один бит"));
+        HelpTopic::GoodToBad);
     badToGoodEdit_ = addProbabilityEdit(layout, QStringLiteral("P_ПХ (плохое → хорошее):"),
         QStringLiteral("badToGoodEdit"), defaults.badToGood,
-        QStringLiteral("Вероятность перехода из плохого состояния в хорошее за один бит"));
+        HelpTopic::BadToGood);
     errorInBadEdit_ = addProbabilityEdit(layout, QStringLiteral("p_П (ошибка в плохом):"),
         QStringLiteral("errorInBadEdit"), defaults.errorInBad,
-        QStringLiteral("Вероятность ошибки бита в плохом состоянии"));
+        HelpTopic::ErrorInBad);
     errorInGoodEdit_ = addProbabilityEdit(layout, QStringLiteral("p_Х (ошибка в хорошем):"),
         QStringLiteral("errorInGoodEdit"), defaults.errorInGood,
-        QStringLiteral("Вероятность ошибки бита в хорошем состоянии"));
+        HelpTopic::ErrorInGood);
     gilbertSummaryLabel_ = new QLabel;
     gilbertSummaryLabel_->setWordWrap(true);
     layout->addRow(gilbertSummaryLabel_);
