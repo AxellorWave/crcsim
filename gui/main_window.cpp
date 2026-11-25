@@ -8,10 +8,11 @@
 #include "model_diagram.h"
 #include "results_table.h"
 #include "run_report.h"
+#include "selection_panel.h"
+#include "theme.h"
+#include "transfer_fields.h"
 #include "user_guide_view.h"
 #include "walkthrough_panel.h"
-#include "selection_panel.h"
-#include "transfer_fields.h"
 
 #include "results.h"
 
@@ -74,7 +75,7 @@ QWidget* MainWindow::createParameterColumn()
 {
     errorLabel_->setObjectName(QStringLiteral("errorLabel"));
     errorLabel_->setWordWrap(true);
-    errorLabel_->setStyleSheet(QStringLiteral("color: #b01010;"));
+    keepTextColor(errorLabel_, &Theme::dangerText);
 
     auto* column = new QWidget;
     auto* layout = new QVBoxLayout(column);

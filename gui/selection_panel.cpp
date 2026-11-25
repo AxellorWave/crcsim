@@ -3,6 +3,7 @@
 #include "field_error.h"
 #include "input_parsing.h"
 #include "selection_table.h"
+#include "theme.h"
 #include "transfer_fields.h"
 
 #include "plan.h"
@@ -64,7 +65,7 @@ SelectionPanel::SelectionPanel(QWidget* parent)
     lengthCombo_->setFixedWidth(editWidth);
     channelLabel_->setWordWrap(true);
     errorLabel_->setWordWrap(true);
-    errorLabel_->setStyleSheet(QStringLiteral("color: #b01010;"));
+    keepTextColor(errorLabel_, &Theme::dangerText);
     errorLabel_->hide();
     statusLabel_->setWordWrap(true);
     conclusionLabel_->setObjectName(QStringLiteral("selectionConclusion"));

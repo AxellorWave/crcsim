@@ -1,6 +1,6 @@
 #include "media_icons.h"
 
-#include "walkthrough_style.h"
+#include "theme.h"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -70,9 +70,10 @@ QPixmap glyphPixmap(MediaGlyph glyph, const QColor& color)
 
 QIcon mediaIcon(MediaGlyph glyph)
 {
-    const QColor activeColor = glyph == MediaGlyph::Play ? walkstyle::dataColor : walkstyle::ink;
+    const Theme& theme = currentTheme();
+    const QColor activeColor = glyph == MediaGlyph::Play ? theme.accent : theme.text;
     QIcon icon;
     icon.addPixmap(glyphPixmap(glyph, activeColor), QIcon::Normal);
-    icon.addPixmap(glyphPixmap(glyph, walkstyle::muted.lighter(125)), QIcon::Disabled);
+    icon.addPixmap(glyphPixmap(glyph, theme.disabledText), QIcon::Disabled);
     return icon;
 }

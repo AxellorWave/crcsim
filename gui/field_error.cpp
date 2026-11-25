@@ -1,12 +1,38 @@
 #include "field_error.h"
 
+#include "theme.h"
+
 #include <QStringList>
 
 #include <algorithm>
 
 namespace {
 
-const char* const invalidFieldStyle = "border: 2px solid #d02020; border-radius: 3px; background: #fff0f0;";
+const char* const invalidProperty = "invalidField";
+const char* const themedProperty = "invalidFieldThemed";
+
+QString invalidFieldStyle(const Theme& theme)
+{
+    return QStringLiteral("border: 2px solid %1; border-radius: 3px; background: %2; color: %3;")
+        .arg(cssColor(theme.danger), cssColor(theme.dangerSoft), cssColor(theme.text));
+}
+
+void applyFieldStyle(QWidget* field)
+{
+    const bool invalid = field->property(invalidProperty).toBool();
+    field->setStyleSheet(invalid ? invalidFieldStyle(currentTheme()) : QString());
+}
+
+void markField(QWidget* field, bool invalid)
+{
+    field->setProperty(invalidProperty, invalid);
+    if (field->property(themedProperty).toBool()) {
+        applyFieldStyle(field);
+        return;
+    }
+    field->setProperty(themedProperty, true);
+    keepThemed(field, [field] { applyFieldStyle(field); });
+}
 
 bool hasError(const QWidget* field, const std::vector<FieldError>& errors)
 {
@@ -24,7 +50,7 @@ void addUnlessReported(std::vector<FieldError>& errors, const FieldError& error)
 void highlightFields(const std::vector<QWidget*>& fields, const std::vector<FieldError>& errors)
 {
     for (QWidget* field : fields)
-        field->setStyleSheet(hasError(field, errors) ? QString::fromLatin1(invalidFieldStyle) : QString());
+        markField(field, hasError(field, errors));
 }
 
 QString joinFieldErrors(const std::vector<FieldError>& errors)

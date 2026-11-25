@@ -49,6 +49,7 @@ private:
     QScrollArea* createCanvasArea();
 
     void connectActions();
+    void applyThemeStyles();
     void rebuild();
     void showPosition();
     void fitCanvas();

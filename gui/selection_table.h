@@ -17,4 +17,6 @@ private:
     void fillRow(int row, const crc::SelectionRow& selection);
     void paintVerdict(int row, crc::RequirementVerdict verdict);
     void markBest(int row, bool byRedundancy, bool byTime);
+    void paintBest(int row);
+    void recolorRows();
 };

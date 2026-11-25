@@ -1,6 +1,7 @@
 #include "plan_table.h"
 
 #include "input_parsing.h"
+#include "theme.h"
 
 #include <QBrush>
 #include <QColor>
@@ -42,17 +43,18 @@ QString statusText(ExperimentStatus status, int percent)
 
 QColor statusColor(ExperimentStatus status)
 {
+    const Theme& theme = currentTheme();
     switch (status) {
     case ExperimentStatus::Running:
-        return QColor(0x1a, 0x5f, 0xb4);
+        return theme.accentStrong;
     case ExperimentStatus::Done:
-        return QColor(0x1e, 0x7a, 0x32);
+        return theme.successText;
     case ExperimentStatus::Cancelled:
-        return QColor(0x9a, 0x60, 0x00);
+        return theme.warningText;
     case ExperimentStatus::Waiting:
         break;
     }
-    return QColor(0x80, 0x80, 0x80);
+    return theme.mutedText;
 }
 
 }
@@ -73,6 +75,16 @@ PlanTable::PlanTable(QWidget* parent)
     horizontalHeader()->setSectionResizeMode(ChannelValues, QHeaderView::Stretch);
     horizontalHeader()->setSectionResizeMode(Status, QHeaderView::Fixed);
     setColumnWidth(Status, fontMetrics().horizontalAdvance(QStringLiteral("идёт — 100 %")) + statusPadding);
+    keepThemed(this, [this] { recolorStatuses(); });
+}
+
+void PlanTable::recolorStatuses()
+{
+    for (int row = 0; row < rowCount(); ++row) {
+        QTableWidgetItem* cell = item(row, Status);
+        if (cell)
+            cell->setForeground(QBrush(statusColor(static_cast<ExperimentStatus>(cell->data(Qt::UserRole).toInt()))));
+    }
 }
 
 void PlanTable::setCell(int row, int column, const QString& text, const QString& toolTip)
@@ -114,6 +126,7 @@ void PlanTable::setStatus(int row, ExperimentStatus status, int percent)
 {
     setCell(row, Status, statusText(status, percent));
     QTableWidgetItem* cell = item(row, Status);
+    cell->setData(Qt::UserRole, static_cast<int>(status));
     cell->setForeground(QBrush(statusColor(status)));
     QFont font = cell->font();
     font.setBold(status == ExperimentStatus::Running);

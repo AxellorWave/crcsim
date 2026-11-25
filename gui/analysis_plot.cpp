@@ -1,6 +1,7 @@
 #include "analysis_plot.h"
 
 #include "probability_format.h"
+#include "theme.h"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -10,11 +11,6 @@
 #include <cmath>
 
 namespace {
-
-const QColor theoryColor(0x2a, 0x78, 0xd6);
-const QColor experimentColor(0xeb, 0x68, 0x34);
-const QColor textColor(0x52, 0x51, 0x4e);
-const QColor gridColor(0xe4, 0xe3, 0xdf);
 
 const double lowestBitErrorProbability = 1e-4;
 const double highestBitErrorProbability = 0.5;
@@ -151,7 +147,7 @@ void AnalysisPlot::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(rect(), Qt::white);
+    painter.fillRect(rect(), currentTheme().surface);
 
     const QFontMetricsF metrics(font());
     const double leftMargin = metrics.horizontalAdvance(powerOfTen(-88)) + metrics.height() + 22.0;
@@ -175,19 +171,19 @@ void AnalysisPlot::paintEvent(QPaintEvent*)
 
 void AnalysisPlot::drawGrid(QPainter& painter) const
 {
-    painter.setPen(QPen(gridColor, 1.0));
+    painter.setPen(QPen(currentTheme().grid, 1.0));
     for (int exponent = static_cast<int>(horizontal_.low); exponent <= 0; ++exponent) {
         for (int factor = 1; factor < 10; ++factor) {
             const double p = factor * std::pow(10.0, exponent);
             if (p < lowestBitErrorProbability || p > highestBitErrorProbability)
                 continue;
             const double x = toScreen(p, 1.0).x();
-            painter.setPen(QPen(gridColor, factor == 1 ? 1.2 : 0.6));
+            painter.setPen(QPen(currentTheme().grid, factor == 1 ? 1.2 : 0.6));
             painter.drawLine(QPointF(x, area_.top()), QPointF(x, area_.bottom()));
         }
     }
     const int step = verticalStep();
-    painter.setPen(QPen(gridColor, 1.2));
+    painter.setPen(QPen(currentTheme().grid, 1.2));
     for (int exponent = static_cast<int>(vertical_.high); exponent >= static_cast<int>(vertical_.low); exponent -= step) {
         const double y = toScreen(1.0, std::pow(10.0, exponent)).y();
         painter.drawLine(QPointF(area_.left(), y), QPointF(area_.right(), y));
@@ -196,7 +192,7 @@ void AnalysisPlot::drawGrid(QPainter& painter) const
 
 void AnalysisPlot::drawAxes(QPainter& painter) const
 {
-    painter.setPen(QPen(textColor, 1.2));
+    painter.setPen(QPen(currentTheme().secondaryText, 1.2));
     painter.setBrush(Qt::NoBrush);
     painter.drawRect(area_);
 
@@ -231,7 +227,7 @@ void AnalysisPlot::drawAxes(QPainter& painter) const
 void AnalysisPlot::drawRequirement(QPainter& painter) const
 {
     const double y = toScreen(1.0, requiredUndetectedProbability).y();
-    QPen pen(textColor, 1.2, Qt::DashLine);
+    QPen pen(currentTheme().secondaryText, 1.2, Qt::DashLine);
     painter.setPen(pen);
     painter.drawLine(QPointF(area_.left(), y), QPointF(area_.right(), y));
     const QFontMetricsF metrics(font());
@@ -252,7 +248,7 @@ void AnalysisPlot::drawCurve(QPainter& painter) const
         else
             path.lineTo(point);
     }
-    painter.setPen(QPen(theoryColor, 2.4));
+    painter.setPen(QPen(currentTheme().accent, 2.4));
     painter.setBrush(Qt::NoBrush);
     painter.drawPath(path);
 }
@@ -262,10 +258,10 @@ void AnalysisPlot::drawMarkedProbability(QPainter& painter) const
     if (!markedProbability_ || *markedProbability_ < lowestBitErrorProbability)
         return;
     const QPointF point = toScreen(*markedProbability_, crc::undetectedProbability(*spectrum_, *markedProbability_));
-    painter.setPen(QPen(theoryColor, 1.0, Qt::DotLine));
+    painter.setPen(QPen(currentTheme().accent, 1.0, Qt::DotLine));
     painter.drawLine(QPointF(point.x(), area_.top()), QPointF(point.x(), area_.bottom()));
-    painter.setPen(QPen(theoryColor, 2.0));
-    painter.setBrush(Qt::white);
+    painter.setPen(QPen(currentTheme().accent, 2.0));
+    painter.setBrush(currentTheme().surface);
     painter.drawEllipse(point, pointRadius, pointRadius);
 }
 
@@ -274,12 +270,12 @@ void AnalysisPlot::drawPoints(QPainter& painter) const
     for (const ExperimentPoint& point : points_) {
         const QPointF center = toScreen(point.bitErrorProbability, point.undetectedProbability);
         if (point.observed) {
-            painter.setPen(QPen(Qt::white, 1.0));
-            painter.setBrush(experimentColor);
+            painter.setPen(QPen(currentTheme().surface, 1.0));
+            painter.setBrush(currentTheme().orange);
             painter.drawEllipse(center, pointRadius, pointRadius);
         } else {
-            painter.setPen(QPen(experimentColor, 1.8));
-            painter.setBrush(Qt::white);
+            painter.setPen(QPen(currentTheme().orange, 1.8));
+            painter.setBrush(currentTheme().surface);
             painter.drawPolygon(downTriangle(center, triangleSize));
         }
     }
@@ -302,29 +298,29 @@ void AnalysisPlot::drawLegend(QPainter& painter) const
     const double rowHeight = metrics.height() + 4;
     const QSizeF size(legendPadding * 3 + legendSample + textWidth, legendPadding * 2 + rowHeight * labels.size());
     const QRectF box(area_.bottomRight() - QPointF(size.width() + 10, size.height() + 10), size);
-    painter.setPen(QPen(gridColor, 1.0));
-    painter.setBrush(Qt::white);
+    painter.setPen(QPen(currentTheme().grid, 1.0));
+    painter.setBrush(currentTheme().surface);
     painter.drawRect(box);
 
     double y = box.top() + legendPadding + rowHeight / 2;
     const double sampleLeft = box.left() + legendPadding;
     const QPointF sampleCenter(sampleLeft + legendSample / 2, 0);
-    painter.setPen(QPen(theoryColor, 2.4));
+    painter.setPen(QPen(currentTheme().accent, 2.4));
     painter.drawLine(QPointF(sampleLeft, y), QPointF(sampleLeft + legendSample, y));
     if (anyObserved) {
         y += rowHeight;
-        painter.setPen(QPen(Qt::white, 1.0));
-        painter.setBrush(experimentColor);
+        painter.setPen(QPen(currentTheme().surface, 1.0));
+        painter.setBrush(currentTheme().orange);
         painter.drawEllipse(sampleCenter + QPointF(0, y), pointRadius, pointRadius);
     }
     if (anyUnobserved) {
         y += rowHeight;
-        painter.setPen(QPen(experimentColor, 1.8));
-        painter.setBrush(Qt::white);
+        painter.setPen(QPen(currentTheme().orange, 1.8));
+        painter.setBrush(currentTheme().surface);
         painter.drawPolygon(downTriangle(sampleCenter + QPointF(0, y), triangleSize));
     }
 
-    painter.setPen(textColor);
+    painter.setPen(currentTheme().secondaryText);
     const double textLeft = sampleLeft + legendSample + legendPadding;
     for (std::size_t row = 0; row < labels.size(); ++row) {
         const double top = box.top() + legendPadding + rowHeight * row;
@@ -334,7 +330,7 @@ void AnalysisPlot::drawLegend(QPainter& painter) const
 
 void AnalysisPlot::drawMessage(QPainter& painter) const
 {
-    painter.setPen(textColor);
+    painter.setPen(currentTheme().secondaryText);
     painter.setFont(scaledFont(font(), 1.05));
     painter.drawText(QRectF(rect()).adjusted(40, 40, -40, -40), Qt::AlignCenter | Qt::TextWordWrap, message_);
     painter.setFont(font());

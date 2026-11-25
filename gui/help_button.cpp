@@ -1,5 +1,7 @@
 #include "help_button.h"
 
+#include "theme.h"
+
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -14,21 +16,30 @@ const int buttonSize = 20;
 const int popupWidth = 380;
 const int popupGap = 4;
 
-const char* const buttonStyle =
-    "QToolButton#helpButton { border: 1px solid #b8c4d6; border-radius: 10px; background: #f4f7fb;"
-    " color: #4A5568; font-weight: bold; padding: 0; }"
-    "QToolButton#helpButton:hover { border-color: #2a78d6; background: #2a78d6; color: white; }"
-    "QToolButton#helpButton:pressed { border-color: #eb6834; background: #eb6834; color: white; }"
-    "QToolButton#helpButton:disabled { border-color: #d6dbe3; color: #a9b1bd; background: #f7f8fa; }";
+QString buttonStyle(const Theme& theme)
+{
+    return QStringLiteral(
+        "QToolButton#helpButton { border: 1px solid %1; border-radius: 10px; background: %2; color: %3;"
+        " font-weight: bold; padding: 0; }"
+        "QToolButton#helpButton:hover { border-color: %4; background: %4; color: %5; }"
+        "QToolButton#helpButton:pressed { border-color: %6; background: %6; color: %5; }"
+        "QToolButton#helpButton:disabled { border-color: %7; color: %8; background: %9; }")
+        .arg(cssColor(theme.buttonBorder), cssColor(theme.buttonFace), cssColor(theme.buttonText), cssColor(theme.accent),
+            cssColor(theme.accentText), cssColor(theme.orange), cssColor(theme.disabledBorder),
+            cssColor(theme.disabledText), cssColor(theme.disabledFace));
+}
 
-const char* const popupStyle =
-    "QFrame#helpPopup { background: #ffffff; border: 1px solid #2a78d6; border-radius: 6px; }"
-    "QLabel#helpPopupBody { color: #14213D; }";
+QString popupStyle(const Theme& theme)
+{
+    return QStringLiteral("QFrame#helpPopup { background: %1; border: 1px solid %2; border-radius: 6px; }"
+                          "QLabel#helpPopupBody { color: %3; }")
+        .arg(cssColor(theme.surfaceAlt), cssColor(theme.accent), cssColor(theme.text));
+}
 
 QString popupHtml(HelpTopic topic)
 {
-    return QStringLiteral("<p style='color:#2a78d6; font-size:11pt; font-weight:600; margin:0 0 6px 0'>%1</p>%2")
-        .arg(parameterHelp(topic).title, parameterHelpHtml(topic));
+    return QStringLiteral("<p style='color:%1; font-size:11pt; font-weight:600; margin:0 0 6px 0'>%2</p>%3")
+        .arg(cssColor(currentTheme().accent), parameterHelp(topic).title, parameterHelpHtml(topic));
 }
 
 QLabel* createPopupLabel(const QString& text)
@@ -45,11 +56,15 @@ QFrame* createPopup(HelpTopic topic, QWidget* anchor)
     auto* popup = new QFrame(anchor, Qt::Popup);
     popup->setObjectName(QStringLiteral("helpPopup"));
     popup->setAttribute(Qt::WA_DeleteOnClose);
-    popup->setStyleSheet(QString::fromLatin1(popupStyle));
     popup->setFixedWidth(popupWidth);
     auto* layout = new QVBoxLayout(popup);
     layout->setContentsMargins(14, 10, 14, 12);
-    layout->addWidget(createPopupLabel(popupHtml(topic)));
+    QLabel* label = createPopupLabel(popupHtml(topic));
+    layout->addWidget(label);
+    keepThemed(popup, [popup, label, topic] {
+        popup->setStyleSheet(popupStyle(currentTheme()));
+        label->setText(popupHtml(topic));
+    });
     popup->setFixedHeight(popup->heightForWidth(popupWidth));
     return popup;
 }
@@ -85,7 +100,7 @@ QToolButton* createHelpButton(HelpTopic topic, QWidget* parent)
     button->setFixedSize(buttonSize, buttonSize);
     button->setCursor(Qt::PointingHandCursor);
     button->setFocusPolicy(Qt::TabFocus);
-    button->setStyleSheet(QString::fromLatin1(buttonStyle));
+    keepThemed(button, [button] { button->setStyleSheet(buttonStyle(currentTheme())); });
     button->setToolTip(QStringLiteral("Справка: ") + parameterHelp(topic).title);
     QObject::connect(button, &QToolButton::clicked, button, [topic, button] { showHelpPopup(topic, button); });
     return button;

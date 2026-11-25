@@ -19,4 +19,5 @@ public:
 private:
     void setCell(int row, int column, const QString& text, const QString& toolTip = QString());
     void fillRow(int row, const crc::PlannedExperiment& experiment);
+    void recolorStatuses();
 };

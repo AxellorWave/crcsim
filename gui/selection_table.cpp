@@ -2,6 +2,7 @@
 
 #include "input_parsing.h"
 #include "probability_format.h"
+#include "theme.h"
 
 #include "plan.h"
 #include "text.h"
@@ -17,25 +18,21 @@ namespace {
 enum Column { Code, CheckBits, Redundancy, Undetected, Blocks, UndetectedShare, UpperBound, VerdictColumn, MeanAttempts,
     TransferTime, Badge, ColumnCount };
 
-const QColor bestRowColor(0xe4, 0xee, 0xfb);
-const QColor badgeColor(0x1a, 0x4f, 0x9c);
+const int bestRole = Qt::UserRole;
+const int verdictRole = Qt::UserRole + 1;
 
-struct VerdictStyle {
-    QColor background;
-    QColor foreground;
-};
-
-VerdictStyle verdictStyle(crc::RequirementVerdict verdict)
+QColor verdictColor(crc::RequirementVerdict verdict)
 {
+    const Theme& theme = currentTheme();
     switch (verdict) {
     case crc::RequirementVerdict::Satisfied:
-        return {QColor(0xd4, 0xef, 0xd8), QColor(0x16, 0x5c, 0x26)};
+        return theme.successText;
     case crc::RequirementVerdict::Borderline:
-        return {QColor(0xfd, 0xe7, 0xb4), QColor(0x7a, 0x4b, 0x00)};
+        return theme.warningText;
     case crc::RequirementVerdict::NotSatisfied:
         break;
     }
-    return {QColor(0xee, 0xee, 0xee), QColor(0x70, 0x70, 0x70)};
+    return theme.mutedText;
 }
 
 QString significant(const std::optional<double>& value)
@@ -69,6 +66,7 @@ SelectionTable::SelectionTable(QWidget* parent)
     verticalHeader()->setDefaultSectionSize(fontMetrics().height() + 10);
     horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     horizontalHeader()->setSectionResizeMode(Badge, QHeaderView::Stretch);
+    keepThemed(this, [this] { recolorRows(); });
 }
 
 QTableWidgetItem* SelectionTable::setCell(int row, int column, const QString& text, const QString& toolTip)
@@ -104,10 +102,37 @@ void SelectionTable::fillRow(int row, const crc::SelectionRow& selection)
 
 void SelectionTable::paintVerdict(int row, crc::RequirementVerdict verdict)
 {
-    const VerdictStyle style = verdictStyle(verdict);
     QTableWidgetItem* cell = item(row, VerdictColumn);
-    cell->setBackground(QBrush(style.background));
-    cell->setForeground(QBrush(style.foreground));
+    cell->setData(verdictRole, static_cast<int>(verdict));
+    QFont font = cell->font();
+    font.setBold(true);
+    cell->setFont(font);
+    cell->setForeground(QBrush(verdictColor(verdict)));
+}
+
+void SelectionTable::paintBest(int row)
+{
+    const Theme& theme = currentTheme();
+    for (int column = 0; column < ColumnCount; ++column) {
+        QTableWidgetItem* cell = item(row, column);
+        cell->setBackground(QBrush(theme.highlightRow));
+        if (column == Badge)
+            cell->setForeground(QBrush(theme.badgeText));
+        else if (column != VerdictColumn)
+            cell->setForeground(QBrush(theme.highlightRowText));
+    }
+}
+
+void SelectionTable::recolorRows()
+{
+    for (int row = 0; row < rowCount(); ++row) {
+        QTableWidgetItem* verdict = item(row, VerdictColumn);
+        if (!verdict)
+            continue;
+        verdict->setForeground(QBrush(verdictColor(static_cast<crc::RequirementVerdict>(verdict->data(verdictRole).toInt()))));
+        if (item(row, Badge)->data(bestRole).toBool())
+            paintBest(row);
+    }
 }
 
 void SelectionTable::markBest(int row, bool byRedundancy, bool byTime)
@@ -117,12 +142,11 @@ void SelectionTable::markBest(int row, bool byRedundancy, bool byTime)
         QFont font = cell->font();
         font.setBold(true);
         cell->setFont(font);
-        if (column != VerdictColumn)
-            cell->setBackground(QBrush(bestRowColor));
     }
     QTableWidgetItem* badge = item(row, Badge);
     badge->setText(badgeText(byRedundancy, byTime));
-    badge->setForeground(QBrush(badgeColor));
+    badge->setData(bestRole, true);
+    paintBest(row);
 }
 
 void SelectionTable::showRows(const std::vector<crc::SelectionRow>& rows, const crc::BestCodes& best)

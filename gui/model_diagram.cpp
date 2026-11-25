@@ -1,5 +1,7 @@
 #include "model_diagram.h"
 
+#include "theme.h"
+
 #include <QPainter>
 #include <QPolygonF>
 
@@ -64,19 +66,20 @@ void ModelDiagram::paintEvent(QPaintEvent*)
 
 void ModelDiagram::drawStage(QPainter& painter, const QRectF& box, const Stage& stage) const
 {
-    painter.setPen(QPen(QColor(0x2f, 0x5d, 0x8a), 1.5));
-    painter.setBrush(QColor(0xe8, 0xf0, 0xfa));
+    const Theme& theme = currentTheme();
+    painter.setPen(QPen(theme.accentStrong, 1.5));
+    painter.setBrush(theme.accentSoft);
     painter.drawRoundedRect(box, 6, 6);
 
     QFont titleFont = font();
     titleFont.setBold(true);
     painter.setFont(titleFont);
-    painter.setPen(QColor(0x1a, 0x2a, 0x3a));
+    painter.setPen(theme.text);
     const QRectF titleArea(box.left(), box.top() + 4, box.width(), box.height() * 0.4);
     painter.drawText(titleArea, Qt::AlignCenter, stage.title);
 
     painter.setFont(font());
-    painter.setPen(QColor(0x44, 0x55, 0x66));
+    painter.setPen(theme.secondaryText);
     const QRectF noteArea(box.left(), titleArea.bottom(), box.width(), box.bottom() - titleArea.bottom() - 4);
     painter.drawText(noteArea, Qt::AlignHCenter | Qt::AlignTop, stage.note);
 }
@@ -87,12 +90,13 @@ void ModelDiagram::drawArrow(QPainter& painter, const QRectF& from, const QRectF
     const QPointF start(from.right() + 2, y);
     const QPointF end(to.left() - 2, y);
 
-    painter.setPen(QPen(QColor(0x33, 0x33, 0x33), 1.5));
+    const Theme& theme = currentTheme();
+    painter.setPen(QPen(theme.secondaryText, 1.5));
     painter.drawLine(start, end - QPointF(arrowHead, 0));
-    painter.setBrush(QColor(0x33, 0x33, 0x33));
+    painter.setBrush(theme.secondaryText);
     painter.drawPolygon(QPolygonF({end, end - QPointF(arrowHead, arrowHead / 2), end - QPointF(arrowHead, -arrowHead / 2)}));
 
-    painter.setPen(QColor(0x80, 0x30, 0x10));
+    painter.setPen(theme.orangeText);
     const QRectF captionArea(start.x() - 10, y - 24, end.x() - start.x() + 20, 20);
     painter.drawText(captionArea, Qt::AlignHCenter | Qt::AlignBottom, caption);
 }
