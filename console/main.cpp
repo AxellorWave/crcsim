@@ -2,8 +2,11 @@
 #include "cli.h"
 #include "codes.h"
 #include "dialog.h"
+#include "exit_codes.h"
+#include "plan_run.h"
 #include "report.h"
 #include "results.h"
+#include "selection_report.h"
 #include "simulator.h"
 #include "terminal.h"
 
@@ -13,9 +16,9 @@
 
 namespace {
 
-constexpr int exitSuccess = 0;
-constexpr int exitInvalidInput = 1;
-constexpr int exitOutputFailure = 2;
+using console::exitInvalidInput;
+using console::exitOutputFailure;
+using console::exitSuccess;
 
 std::uint64_t percentDone(const crc::Counters& counters, const crc::ControlParams& control)
 {
@@ -137,6 +140,12 @@ int main(int argc, char** argv)
             std::cout << console::usage();
             return exitSuccess;
         }
+        if (commandLine.allLengths && !commandLine.select)
+            throw std::invalid_argument("--n all можно указать только вместе с --select");
+        if (commandLine.select)
+            return console::runSelection(commandLine);
+        if (!commandLine.planPath.empty())
+            return console::runPlan(commandLine);
         if (commandLine.analyze)
             return runAnalysis(commandLine.params);
         return runBatch(commandLine);
