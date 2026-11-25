@@ -1,3 +1,4 @@
+#include "analysis_report.h"
 #include "cli.h"
 #include "codes.h"
 #include "dialog.h"
@@ -81,6 +82,23 @@ int runInteractive()
     return path ? saveCsv(*path, result) : exitSuccess;
 }
 
+int runAnalysis(const crc::SimulationParams& params)
+{
+    crc::ChannelParams bsc;
+    bsc.bsc = params.channel.bsc;
+    std::vector<crc::ValidationError> errors = crc::validateCoding(params.coding);
+    const std::vector<crc::ValidationError> channelErrors = crc::validateChannel(bsc);
+    errors.insert(errors.end(), channelErrors.begin(), channelErrors.end());
+    if (!errors.empty())
+        throw std::invalid_argument(crc::joinMessages(errors));
+    const crc::CodeAnalysis analysis = crc::analyzeCode(crc::makeCode(params.coding));
+    console::printAnalysis(std::cout, analysis, bsc.bsc.bitErrorProbability);
+    if (analysis.computable())
+        return exitSuccess;
+    std::cerr << "Ошибка: " << analysis.failureReason << '\n';
+    return exitInvalidInput;
+}
+
 int runBatch(const console::CommandLine& commandLine)
 {
     const crc::SimulationResult result = simulate(commandLine.params, !commandLine.quiet && !commandLine.csvOutput);
@@ -119,6 +137,8 @@ int main(int argc, char** argv)
             std::cout << console::usage();
             return exitSuccess;
         }
+        if (commandLine.analyze)
+            return runAnalysis(commandLine.params);
         return runBatch(commandLine);
     } catch (const std::invalid_argument& error) {
         std::cerr << "Ошибка: " << error.what() << '\n';

@@ -82,6 +82,7 @@ const std::map<std::string, FlagHandler>& flagOptions()
         {"--csv-stdout", [](CommandLine& c) { c.csvOutput = true; }},
         {"--quiet", [](CommandLine& c) { c.quiet = true; }},
         {"--list-codes", [](CommandLine& c) { c.listCodes = true; }},
+        {"--analyze", [](CommandLine& c) { c.analyze = true; }},
         {"--help", [](CommandLine& c) { c.help = true; }},
         {"-h", [](CommandLine& c) { c.help = true; }},
     };
@@ -135,6 +136,9 @@ std::string usage()
            "  --csv-stdout                вывести на экран только CSV (заголовок и строку)\n"
            "  --quiet                     не показывать ход моделирования\n"
            "  --list-codes                вывести таблицу образующих многочленов (n;k;t;g)\n"
+           "Анализ кода (без моделирования):\n"
+           "  --analyze                   весовой спектр, кодовое расстояние d, гарантии\n"
+           "                              обнаружения и точная Pлож в ДСК при p из --p\n"
            "  --help                      эта справка\n";
 }
 
