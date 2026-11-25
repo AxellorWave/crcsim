@@ -15,6 +15,6 @@ public:
 private:
     QTableWidgetItem* setCell(int row, int column, const QString& text, const QString& toolTip = QString());
     void fillRow(int row, const crc::SelectionRow& selection);
-    void paintVerdict(int row, crc::Verdict verdict);
+    void paintVerdict(int row, crc::RequirementVerdict verdict);
     void markBest(int row, bool byRedundancy, bool byTime);
 };

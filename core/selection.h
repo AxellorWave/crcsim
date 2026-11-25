@@ -19,7 +19,7 @@ constexpr double defaultSelectionTarget = 1e-6;
 constexpr std::uint64_t defaultSelectionBlocks = 3000000;
 constexpr std::uint64_t defaultSelectionSeed = 42;
 
-enum class Verdict { Satisfied, NotSatisfied, Borderline };
+enum class RequirementVerdict { Satisfied, NotSatisfied, Borderline };
 
 struct SelectionRequest {
     std::optional<int> codeLength = 15;
@@ -34,7 +34,7 @@ struct SelectionRow {
     SimulationResult result;
     ProbabilityEstimate undetected;
     double upperBound = 0.0;
-    Verdict verdict = Verdict::NotSatisfied;
+    RequirementVerdict verdict = RequirementVerdict::NotSatisfied;
     std::optional<double> meanAttempts;
     std::optional<double> transferTime;
 };
@@ -66,7 +66,7 @@ std::vector<int> knownCodeLengths();
 
 SimulationParams candidateParams(const CyclicCode& code, const SelectionRequest& request);
 
-Verdict judge(const ProbabilityEstimate& undetected, double target);
+RequirementVerdict judge(const ProbabilityEstimate& undetected, double target);
 
 SelectionRow evaluateCandidate(const SimulationResult& result, const SelectionRequest& request);
 
@@ -74,7 +74,7 @@ BestCodes chooseBest(const std::vector<SelectionRow>& rows);
 
 SelectionOutcome selectCode(const SelectionRequest& request, const SelectionControl& control = {});
 
-std::string verdictText(Verdict verdict);
+std::string verdictText(RequirementVerdict verdict);
 
 std::string selectionConclusion(const SelectionRequest& request, const std::vector<SelectionRow>& rows, const BestCodes& best);
 

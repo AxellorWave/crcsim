@@ -43,7 +43,7 @@ std::optional<std::size_t> bestSatisfied(const std::vector<SelectionRow>& rows,
     std::optional<std::size_t> best;
     for (std::size_t index = 0; index < rows.size(); ++index) {
         const SelectionRow& row = rows[index];
-        if (row.verdict != Verdict::Satisfied || !eligible(row))
+        if (row.verdict != RequirementVerdict::Satisfied || !eligible(row))
             continue;
         if (!best || better(row, rows[*best]))
             best = index;
@@ -81,7 +81,7 @@ std::string timePart(const std::vector<SelectionRow>& rows, const BestCodes& bes
 
 bool hasBorderline(const std::vector<SelectionRow>& rows)
 {
-    return std::any_of(rows.begin(), rows.end(), [](const SelectionRow& row) { return row.verdict == Verdict::Borderline; });
+    return std::any_of(rows.begin(), rows.end(), [](const SelectionRow& row) { return row.verdict == RequirementVerdict::Borderline; });
 }
 
 }
@@ -132,13 +132,13 @@ SimulationParams candidateParams(const CyclicCode& code, const SelectionRequest&
     return params;
 }
 
-Verdict judge(const ProbabilityEstimate& undetected, double target)
+RequirementVerdict judge(const ProbabilityEstimate& undetected, double target)
 {
     if (satisfiedBy(undetected.upperBound95(), target))
-        return Verdict::Satisfied;
+        return RequirementVerdict::Satisfied;
     if (undetected.value() > target)
-        return Verdict::NotSatisfied;
-    return Verdict::Borderline;
+        return RequirementVerdict::NotSatisfied;
+    return RequirementVerdict::Borderline;
 }
 
 SelectionRow evaluateCandidate(const SimulationResult& result, const SelectionRequest& request)
@@ -188,14 +188,14 @@ SelectionOutcome selectCode(const SelectionRequest& request, const SelectionCont
     return outcome;
 }
 
-std::string verdictText(Verdict verdict)
+std::string verdictText(RequirementVerdict verdict)
 {
     switch (verdict) {
-    case Verdict::Satisfied:
+    case RequirementVerdict::Satisfied:
         return "выполнено";
-    case Verdict::Borderline:
+    case RequirementVerdict::Borderline:
         return "пограничный — увеличьте N";
-    case Verdict::NotSatisfied:
+    case RequirementVerdict::NotSatisfied:
         break;
     }
     return "не выполнено";

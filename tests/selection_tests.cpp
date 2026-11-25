@@ -40,13 +40,13 @@ BOOST_AUTO_TEST_SUITE(selection)
 
 BOOST_AUTO_TEST_CASE(judges_requirement)
 {
-    BOOST_TEST((judge({0, 3000000}, 1e-6) == Verdict::Satisfied));
-    BOOST_TEST((judge({0, 10000000}, 1e-6) == Verdict::Satisfied));
-    BOOST_TEST((judge({20, 3000000}, 1e-6) == Verdict::NotSatisfied));
-    BOOST_TEST((judge({2, 3000000}, 1e-6) == Verdict::Borderline));
-    BOOST_TEST((judge({4, 3000000}, 1e-6) == Verdict::NotSatisfied));
-    BOOST_TEST((judge({1, 100000000}, 1e-6) == Verdict::Satisfied));
-    BOOST_TEST((judge({0, 1000000}, 1e-6) == Verdict::Borderline));
+    BOOST_TEST((judge({0, 3000000}, 1e-6) == RequirementVerdict::Satisfied));
+    BOOST_TEST((judge({0, 10000000}, 1e-6) == RequirementVerdict::Satisfied));
+    BOOST_TEST((judge({20, 3000000}, 1e-6) == RequirementVerdict::NotSatisfied));
+    BOOST_TEST((judge({2, 3000000}, 1e-6) == RequirementVerdict::Borderline));
+    BOOST_TEST((judge({4, 3000000}, 1e-6) == RequirementVerdict::NotSatisfied));
+    BOOST_TEST((judge({1, 100000000}, 1e-6) == RequirementVerdict::Satisfied));
+    BOOST_TEST((judge({0, 1000000}, 1e-6) == RequirementVerdict::Borderline));
 }
 
 BOOST_AUTO_TEST_CASE(borderline_means_point_below_and_bound_above)
@@ -54,10 +54,10 @@ BOOST_AUTO_TEST_CASE(borderline_means_point_below_and_bound_above)
     const SelectionRow row = makeRow("111010001", 2, 2782365);
     BOOST_TEST(row.undetected.value() <= 1e-6);
     BOOST_TEST(row.upperBound > 1e-6);
-    BOOST_TEST((row.verdict == Verdict::Borderline));
+    BOOST_TEST((row.verdict == RequirementVerdict::Borderline));
     BOOST_TEST(verdictText(row.verdict) == "пограничный — увеличьте N");
-    BOOST_TEST(verdictText(Verdict::Satisfied) == "выполнено");
-    BOOST_TEST(verdictText(Verdict::NotSatisfied) == "не выполнено");
+    BOOST_TEST(verdictText(RequirementVerdict::Satisfied) == "выполнено");
+    BOOST_TEST(verdictText(RequirementVerdict::NotSatisfied) == "не выполнено");
 }
 
 BOOST_AUTO_TEST_CASE(computes_attempts_and_transfer_time)
@@ -159,9 +159,9 @@ BOOST_AUTO_TEST_CASE(reproduces_reference_selection_for_n15)
     BOOST_TEST(outcome.rows[0].result.counters.undetected == 20u);
     BOOST_TEST(outcome.rows[1].result.counters.undetected == 0u);
     BOOST_TEST(outcome.rows[2].result.counters.undetected == 0u);
-    BOOST_TEST((outcome.rows[0].verdict == Verdict::NotSatisfied));
-    BOOST_TEST((outcome.rows[1].verdict == Verdict::Satisfied));
-    BOOST_TEST((outcome.rows[2].verdict == Verdict::Satisfied));
+    BOOST_TEST((outcome.rows[0].verdict == RequirementVerdict::NotSatisfied));
+    BOOST_TEST((outcome.rows[1].verdict == RequirementVerdict::Satisfied));
+    BOOST_TEST((outcome.rows[2].verdict == RequirementVerdict::Satisfied));
     BOOST_TEST(*outcome.best.byRedundancy == 1u);
     BOOST_TEST(*outcome.best.byTime == 1u);
     const std::string conclusion = selectionConclusion(referenceRequest(), outcome.rows, outcome.best);

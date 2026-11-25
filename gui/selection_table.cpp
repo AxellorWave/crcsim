@@ -25,14 +25,14 @@ struct VerdictStyle {
     QColor foreground;
 };
 
-VerdictStyle verdictStyle(crc::Verdict verdict)
+VerdictStyle verdictStyle(crc::RequirementVerdict verdict)
 {
     switch (verdict) {
-    case crc::Verdict::Satisfied:
+    case crc::RequirementVerdict::Satisfied:
         return {QColor(0xd4, 0xef, 0xd8), QColor(0x16, 0x5c, 0x26)};
-    case crc::Verdict::Borderline:
+    case crc::RequirementVerdict::Borderline:
         return {QColor(0xfd, 0xe7, 0xb4), QColor(0x7a, 0x4b, 0x00)};
-    case crc::Verdict::NotSatisfied:
+    case crc::RequirementVerdict::NotSatisfied:
         break;
     }
     return {QColor(0xee, 0xee, 0xee), QColor(0x70, 0x70, 0x70)};
@@ -102,7 +102,7 @@ void SelectionTable::fillRow(int row, const crc::SelectionRow& selection)
     paintVerdict(row, selection.verdict);
 }
 
-void SelectionTable::paintVerdict(int row, crc::Verdict verdict)
+void SelectionTable::paintVerdict(int row, crc::RequirementVerdict verdict)
 {
     const VerdictStyle style = verdictStyle(verdict);
     QTableWidgetItem* cell = item(row, VerdictColumn);
