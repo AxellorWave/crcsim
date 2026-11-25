@@ -2,6 +2,12 @@
 
 #include <QString>
 
-QString userGuideStyleSheet();
+struct UserGuideColors {
+    QString text;
+    QString base;
+    QString rule;
+};
+
+QString userGuideStyleSheet(const UserGuideColors& colors);
 
 QString userGuideHtml();
