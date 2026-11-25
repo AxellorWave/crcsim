@@ -37,15 +37,20 @@ crc::ChannelKind channelKind(const std::string& text)
     throw std::invalid_argument("тип канала должен быть bsc или gilbert, получено «" + text + "»");
 }
 
+void setLength(CommandLine& commandLine, const std::string& option, const std::string& text)
+{
+    commandLine.allLengths = text == "all" || text == "все";
+    if (!commandLine.allLengths)
+        commandLine.params.coding.n = parseOrThrow(parseInteger(text), option, text);
+}
+
 using ValueHandler = std::function<void(CommandLine&, const std::string&, const std::string&)>;
 using FlagHandler = std::function<void(CommandLine&)>;
 
 const std::map<std::string, ValueHandler>& valueOptions()
 {
     static const std::map<std::string, ValueHandler> options = {
-        {"--n", [](CommandLine& c, const std::string& o, const std::string& v) {
-             c.params.coding.n = parseOrThrow(parseInteger(v), o, v);
-         }},
+        {"--n", [](CommandLine& c, const std::string& o, const std::string& v) { setLength(c, o, v); }},
         {"--g", [](CommandLine& c, const std::string&, const std::string& v) { c.params.coding.generator = v; }},
         {"--channel", [](CommandLine& c, const std::string&, const std::string& v) { c.params.channel.kind = channelKind(v); }},
         {"--p", [](CommandLine& c, const std::string& o, const std::string& v) {
@@ -65,13 +70,23 @@ const std::map<std::string, ValueHandler>& valueOptions()
          }},
         {"--blocks", [](CommandLine& c, const std::string& o, const std::string& v) {
              c.params.control.blockLimit = countValue(o, v);
+             c.blocksGiven = true;
          }},
         {"--errors", [](CommandLine& c, const std::string& o, const std::string& v) {
              c.params.control.stopMode = crc::StopMode::ErrorCount;
              c.params.control.errorLimit = countValue(o, v);
          }},
-        {"--seed", [](CommandLine& c, const std::string& o, const std::string& v) { c.params.control.seed = countValue(o, v); }},
+        {"--seed", [](CommandLine& c, const std::string& o, const std::string& v) {
+             c.params.control.seed = countValue(o, v);
+             c.seedGiven = true;
+         }},
         {"--csv", [](CommandLine& c, const std::string&, const std::string& v) { c.csvPath = v; }},
+        {"--plan", [](CommandLine& c, const std::string&, const std::string& v) { c.planPath = v; }},
+        {"--target", [](CommandLine& c, const std::string& o, const std::string& v) { c.target = realValue(o, v); }},
+        {"--file-bits", [](CommandLine& c, const std::string& o, const std::string& v) {
+             c.transfer.fileBits = realValue(o, v);
+         }},
+        {"--rate", [](CommandLine& c, const std::string& o, const std::string& v) { c.transfer.bitRate = realValue(o, v); }},
     };
     return options;
 }
@@ -83,6 +98,7 @@ const std::map<std::string, FlagHandler>& flagOptions()
         {"--quiet", [](CommandLine& c) { c.quiet = true; }},
         {"--list-codes", [](CommandLine& c) { c.listCodes = true; }},
         {"--analyze", [](CommandLine& c) { c.analyze = true; }},
+        {"--select", [](CommandLine& c) { c.select = true; }},
         {"--help", [](CommandLine& c) { c.help = true; }},
         {"-h", [](CommandLine& c) { c.help = true; }},
     };
@@ -115,6 +131,8 @@ std::string usage()
     return "Использование:\n"
            "  crcsim                      интерактивный режим\n"
            "  crcsim [параметры]          пакетный режим\n"
+           "  crcsim --plan ФАЙЛ          выполнить все опыты плана (CSV или JSON)\n"
+           "  crcsim --select [параметры] подобрать код для канала\n"
            "\n"
            "Кодирование:\n"
            "  --n ЧИСЛО                   длина кодового слова, 3..64 (по умолчанию 15)\n"
@@ -134,6 +152,18 @@ std::string usage()
            "Анализ кода (без моделирования):\n"
            "  --analyze                   весовой спектр, кодовое расстояние d, гарантии\n"
            "                              обнаружения и точная Pлож в ДСК при p из --p\n"
+           "План опытов:\n"
+           "  --plan ФАЙЛ                 план опытов: CSV со столбцами n;g;channel;p;p_gb;\n"
+           "                              p_bg;p_bad;p_good;blocks;errors;seed;label или JSON\n"
+           "                              с теми же полями; результаты — CSV на экран,\n"
+           "                              с --csv ФАЙЛ строки дописываются и в файл\n"
+           "Подбор кода:\n"
+           "  --select                    смоделировать известные коды длины --n (или --n all)\n"
+           "                              на заданном канале и выбрать лучший по I и по Tф\n"
+           "  --target ЧИСЛО              требование Pлож (по умолчанию 1e-6)\n"
+           "  --file-bits ЧИСЛО           размер файла M, бит (1000000)\n"
+           "  --rate ЧИСЛО                скорость передачи, бит/с (9600)\n"
+           "                              по умолчанию N = 3000000, seed = 42\n"
            "Вывод:\n"
            "  --csv ФАЙЛ                  дописать строку результата в файл CSV\n"
            "  --csv-stdout                вывести на экран только CSV (заголовок и строку)\n"

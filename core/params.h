@@ -52,6 +52,9 @@ enum class Field {
     ErrorInGood,
     BlockLimit,
     ErrorLimit,
+    FileSize,
+    BitRate,
+    Target,
 };
 
 struct ValidationError {
