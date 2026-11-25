@@ -1,5 +1,7 @@
 #include "results_table.h"
 
+#include "probability_format.h"
+
 #include "results.h"
 
 #include <QHeaderView>
@@ -33,6 +35,11 @@ QString probabilityText(const crc::ProbabilityEstimate& estimate)
 QString probabilityToolTip(const crc::ProbabilityEstimate& estimate)
 {
     return estimate.observed() ? QString() : QString::fromStdString(crc::describeUnobserved(estimate));
+}
+
+bool sameCode(const crc::CyclicCode& left, const crc::CyclicCode& right)
+{
+    return left.n == right.n && left.generator == right.generator;
 }
 
 }
@@ -80,9 +87,31 @@ void ResultsTable::addResult(const crc::SimulationResult& result)
     setCell(row, Undetected, count(counters.undetected));
     setCell(row, CorrectShare, probabilityText(summary.correct), probabilityToolTip(summary.correct));
     setCell(row, DetectedShare, probabilityText(summary.detected), probabilityToolTip(summary.detected));
-    setCell(row, UndetectedShare, probabilityText(summary.undetected), probabilityToolTip(summary.undetected));
+    setCell(row, UndetectedShare, probabilityText(summary.undetected), undetectedToolTip(result));
     setCell(row, Redundancy, number(summary.redundancy, 3));
     scrollToBottom();
+}
+
+QString ResultsTable::undetectedToolTip(const crc::SimulationResult& result)
+{
+    const QString observed = probabilityToolTip(crc::summarize(result).undetected);
+    if (result.channelCsvName != "BSC")
+        return observed;
+    const std::optional<double> theory = theory_.undetectedProbability(result.code, result.meanBitErrorProbability);
+    if (!theory)
+        return observed;
+    const QString theoryText = QStringLiteral("теория: ") + formatSmallProbability(*theory);
+    return observed.isEmpty() ? theoryText : observed + QLatin1Char('\n') + theoryText;
+}
+
+void ResultsTable::rememberSpectrum(const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum)
+{
+    theory_.store(code, spectrum);
+    for (int row = 0; row < rowCount(); ++row) {
+        const crc::SimulationResult& result = results_[static_cast<std::size_t>(row)];
+        if (sameCode(result.code, code))
+            item(row, UndetectedShare)->setToolTip(undetectedToolTip(result));
+    }
 }
 
 void ResultsTable::clearResults()
