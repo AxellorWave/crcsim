@@ -1,6 +1,7 @@
 #include "main_window.h"
 
 #include "analysis_panel.h"
+#include "batch_panel.h"
 #include "channel_panel.h"
 #include "coding_panel.h"
 #include "control_panel.h"
@@ -9,6 +10,8 @@
 #include "run_report.h"
 #include "user_guide_view.h"
 #include "walkthrough_panel.h"
+#include "selection_panel.h"
+#include "transfer_fields.h"
 
 #include "results.h"
 
@@ -90,6 +93,10 @@ QWidget* MainWindow::createRunColumn()
     tabs_->addTab(createSimulationTab(), QStringLiteral("Моделирование"));
     tabs_->addTab(analysisPanel_, QStringLiteral("Анализ кода"));
     tabs_->addTab(walkthroughPanel_, QStringLiteral("Разбор блока"));
+    batchPanel_ = new BatchPanel;
+    selectionPanel_ = new SelectionPanel;
+    tabs_->addTab(batchPanel_, QStringLiteral("Пакет"));
+    tabs_->addTab(selectionPanel_, QStringLiteral("Подбор кода"));
     tabs_->addTab(createUserGuideView(), QStringLiteral("Руководство"));
     return tabs_;
 }
@@ -107,6 +114,8 @@ QWidget* MainWindow::createSimulationTab()
     layout->addWidget(createRunControls());
     layout->addWidget(countersLabel_);
     layout->addWidget(statusLabel_);
+    transferFields_ = new TransferFields;
+    layout->addWidget(transferFields_);
     layout->addWidget(resultsTable_, 1);
     layout->addWidget(createTableControls());
     return column;
@@ -153,6 +162,24 @@ void MainWindow::connectActions()
     analysisPanel_->setOnSpectrum([this](const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum) {
         resultsTable_->rememberSpectrum(code, spectrum);
     });
+    connectBatchAndSelection();
+}
+
+void MainWindow::connectBatchAndSelection()
+{
+    batchPanel_->setOnResult([this](const crc::SimulationResult& result) { addBatchResult(result); });
+    transferFields_->setOnChanged([this] {
+        resultsTable_->setTransfer(transferFields_->settings());
+        selectionPanel_->transferFields()->copyFrom(*transferFields_);
+    });
+    selectionPanel_->setOnTransferChanged([this] { transferFields_->copyFrom(*selectionPanel_->transferFields()); });
+}
+
+void MainWindow::addBatchResult(const crc::SimulationResult& result)
+{
+    resultsTable_->addResult(result);
+    analysisPanel_->setResults(resultsTable_->results());
+    updateTableButtons();
 }
 
 void MainWindow::revalidate()
@@ -163,6 +190,7 @@ void MainWindow::revalidate()
     updateWalkthrough(joinFieldErrors(errors), channelErrors.empty());
     const std::vector<FieldError> controlErrors = controlPanel_->validate();
     errors.insert(errors.end(), channelErrors.begin(), channelErrors.end());
+    selectionPanel_->setChannel(channelErrors.empty() ? std::optional<crc::ChannelParams>(channelPanel_->params()) : std::nullopt);
     errors.insert(errors.end(), controlErrors.begin(), controlErrors.end());
     parametersValid_ = errors.empty();
     errorLabel_->setText(joinFieldErrors(errors));
@@ -198,7 +226,7 @@ void MainWindow::setRunning(bool running)
 void MainWindow::updateTableButtons()
 {
     const bool hasResults = !resultsTable_->results().empty();
-    clearButton_->setEnabled(hasResults && !runner_.running());
+    clearButton_->setEnabled(hasResults && !runner_.running() && !batchPanel_->running());
     saveButton_->setEnabled(hasResults);
 }
 
@@ -271,5 +299,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     runner_.cancel();
     analysisPanel_->cancel();
+    batchPanel_->stop();
+    selectionPanel_->stop();
     event->accept();
 }

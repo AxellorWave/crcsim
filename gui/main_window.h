@@ -7,6 +7,7 @@
 #include <QMainWindow>
 
 class AnalysisPanel;
+class BatchPanel;
 class ChannelPanel;
 class CodingPanel;
 class ControlPanel;
@@ -17,6 +18,8 @@ class QPushButton;
 class QTabWidget;
 class ResultsTable;
 class WalkthroughPanel;
+class SelectionPanel;
+class TransferFields;
 
 class MainWindow : public QMainWindow {
 public:
@@ -44,6 +47,8 @@ private:
     void updateTableButtons();
     void updateAnalysisCode(bool codingValid);
     void updateWalkthrough(const QString& codingProblem, bool channelValid);
+    void connectBatchAndSelection();
+    void addBatchResult(const crc::SimulationResult& result);
 
     CodingPanel* codingPanel_;
     ChannelPanel* channelPanel_;
@@ -64,4 +69,7 @@ private:
     SimulationRunner runner_;
     crc::ControlParams runningControl_;
     bool parametersValid_ = false;
+    TransferFields* transferFields_ = nullptr;
+    BatchPanel* batchPanel_ = nullptr;
+    SelectionPanel* selectionPanel_ = nullptr;
 };
