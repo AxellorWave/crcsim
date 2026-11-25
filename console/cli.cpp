@@ -82,6 +82,7 @@ const std::map<std::string, FlagHandler>& flagOptions()
         {"--csv-stdout", [](CommandLine& c) { c.csvOutput = true; }},
         {"--quiet", [](CommandLine& c) { c.quiet = true; }},
         {"--list-codes", [](CommandLine& c) { c.listCodes = true; }},
+        {"--analyze", [](CommandLine& c) { c.analyze = true; }},
         {"--help", [](CommandLine& c) { c.help = true; }},
         {"-h", [](CommandLine& c) { c.help = true; }},
     };
@@ -130,6 +131,9 @@ std::string usage()
            "                              вместе с --errors — предельное число блоков\n"
            "  --errors ЧИСЛО              остановка после заданного числа ошибочных блоков\n"
            "  --seed ЧИСЛО                начальное значение генератора (0 — случайное)\n"
+           "Анализ кода (без моделирования):\n"
+           "  --analyze                   весовой спектр, кодовое расстояние d, гарантии\n"
+           "                              обнаружения и точная Pлож в ДСК при p из --p\n"
            "Вывод:\n"
            "  --csv ФАЙЛ                  дописать строку результата в файл CSV\n"
            "  --csv-stdout                вывести на экран только CSV (заголовок и строку)\n"

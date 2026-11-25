@@ -6,6 +6,7 @@
 
 #include <QMainWindow>
 
+class AnalysisPanel;
 class ChannelPanel;
 class CodingPanel;
 class ControlPanel;
@@ -13,6 +14,7 @@ class ModelDiagram;
 class QLabel;
 class QProgressBar;
 class QPushButton;
+class QTabWidget;
 class ResultsTable;
 
 class MainWindow : public QMainWindow {
@@ -25,6 +27,7 @@ protected:
 private:
     QWidget* createParameterColumn();
     QWidget* createRunColumn();
+    QWidget* createSimulationTab();
     QWidget* createRunControls();
     QWidget* createTableControls();
     void connectActions();
@@ -38,6 +41,7 @@ private:
     void saveResults();
     void clearResults();
     void updateTableButtons();
+    void updateAnalysisCode(bool codingValid);
 
     CodingPanel* codingPanel_;
     ChannelPanel* channelPanel_;
@@ -52,6 +56,8 @@ private:
     ResultsTable* resultsTable_;
     QPushButton* clearButton_;
     QPushButton* saveButton_;
+    AnalysisPanel* analysisPanel_;
+    QTabWidget* tabs_;
     SimulationRunner runner_;
     crc::ControlParams runningControl_;
     bool parametersValid_ = false;

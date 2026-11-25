@@ -14,6 +14,7 @@ struct CommandLine {
     bool quiet = false;
     bool help = false;
     bool listCodes = false;
+    bool analyze = false;
 };
 
 CommandLine parseCommandLine(const std::vector<std::string>& arguments);

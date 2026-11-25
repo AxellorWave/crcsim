@@ -1,5 +1,6 @@
 #include "main_window.h"
 
+#include "analysis_panel.h"
 #include "channel_panel.h"
 #include "coding_panel.h"
 #include "control_panel.h"
@@ -18,6 +19,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QVBoxLayout>
 
 #include <exception>
@@ -37,6 +39,8 @@ MainWindow::MainWindow(QWidget* parent)
     , resultsTable_(new ResultsTable)
     , clearButton_(new QPushButton(QStringLiteral("Очистить")))
     , saveButton_(new QPushButton(QStringLiteral("Сохранить в CSV")))
+    , analysisPanel_(new AnalysisPanel)
+    , tabs_(new QTabWidget)
     , runner_(this)
 {
     setWindowTitle(QStringLiteral("Исследование циклических кодов в режиме обнаружения ошибок"));
@@ -78,6 +82,14 @@ QWidget* MainWindow::createParameterColumn()
 }
 
 QWidget* MainWindow::createRunColumn()
+{
+    tabs_->setObjectName(QStringLiteral("resultTabs"));
+    tabs_->addTab(createSimulationTab(), QStringLiteral("Моделирование"));
+    tabs_->addTab(analysisPanel_, QStringLiteral("Анализ кода"));
+    return tabs_;
+}
+
+QWidget* MainWindow::createSimulationTab()
 {
     countersLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     statusLabel_->setObjectName(QStringLiteral("statusLabel"));
@@ -133,11 +145,15 @@ void MainWindow::connectActions()
     });
     connect(clearButton_, &QPushButton::clicked, this, [this] { clearResults(); });
     connect(saveButton_, &QPushButton::clicked, this, [this] { saveResults(); });
+    analysisPanel_->setOnSpectrum([this](const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum) {
+        resultsTable_->rememberSpectrum(code, spectrum);
+    });
 }
 
 void MainWindow::revalidate()
 {
     std::vector<FieldError> errors = codingPanel_->validate();
+    updateAnalysisCode(errors.empty());
     const std::vector<FieldError> channelErrors = channelPanel_->validate();
     const std::vector<FieldError> controlErrors = controlPanel_->validate();
     errors.insert(errors.end(), channelErrors.begin(), channelErrors.end());
@@ -146,6 +162,11 @@ void MainWindow::revalidate()
     errorLabel_->setText(joinFieldErrors(errors));
     errorLabel_->setVisible(!parametersValid_);
     startButton_->setEnabled(parametersValid_ && !runner_.running());
+}
+
+void MainWindow::updateAnalysisCode(bool codingValid)
+{
+    analysisPanel_->setCode(codingValid ? std::optional<crc::CyclicCode>(crc::makeCode(codingPanel_->params())) : std::nullopt);
 }
 
 void MainWindow::setRunning(bool running)
@@ -197,6 +218,7 @@ void MainWindow::finishSimulation(const crc::SimulationResult& result)
 {
     showProgress(result.counters);
     resultsTable_->addResult(result);
+    analysisPanel_->setResults(resultsTable_->results());
     statusLabel_->setText(runSummaryText(result));
     setRunning(false);
 }
@@ -226,11 +248,13 @@ void MainWindow::saveResults()
 void MainWindow::clearResults()
 {
     resultsTable_->clearResults();
+    analysisPanel_->setResults(resultsTable_->results());
     updateTableButtons();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
     runner_.cancel();
+    analysisPanel_->cancel();
     event->accept();
 }
