@@ -3,6 +3,7 @@
 #include "probability_format.h"
 
 #include "results.h"
+#include "text.h"
 
 #include <QHeaderView>
 #include <QStringList>
@@ -10,7 +11,7 @@
 namespace {
 
 enum Column { CodeLength, DataBits, Generator, ChannelName, BitError, Blocks, Correct, Detected, Undetected,
-    CorrectShare, DetectedShare, UndetectedShare, Redundancy, ColumnCount };
+    CorrectShare, DetectedShare, UndetectedShare, Redundancy, MeanAttempts, TransferTime, ColumnCount };
 
 QString number(double value, int digits)
 {
@@ -37,6 +38,13 @@ QString probabilityToolTip(const crc::ProbabilityEstimate& estimate)
     return estimate.observed() ? QString() : QString::fromStdString(crc::describeUnobserved(estimate));
 }
 
+const char* const infiniteAttemptsToolTip = "блок ни разу не принят верно, L и Tф бесконечны";
+
+QString significant(double value)
+{
+    return QString::fromStdString(crc::formatSignificant(value, 4, false));
+}
+
 bool sameCode(const crc::CyclicCode& left, const crc::CyclicCode& right)
 {
     return left.n == right.n && left.generator == right.generator;
@@ -50,7 +58,10 @@ ResultsTable::ResultsTable(QWidget* parent)
     setHorizontalHeaderLabels({QStringLiteral("n"), QStringLiteral("k"), QStringLiteral("g(x)"),
         QStringLiteral("Канал"), QStringLiteral("p"), QStringLiteral("N"), QStringLiteral("Nв"),
         QStringLiteral("Nобн"), QStringLiteral("Nлож"), QStringLiteral("Pв"), QStringLiteral("Pобн"),
-        QStringLiteral("Pлож"), QStringLiteral("I")});
+        QStringLiteral("Pлож"), QStringLiteral("I"), QStringLiteral("L"), QStringLiteral("Tф, с")});
+    horizontalHeaderItem(MeanAttempts)->setToolTip(QStringLiteral("Среднее число попыток передачи блока L = N/Nв"));
+    horizontalHeaderItem(TransferTime)->setToolTip(
+        QStringLiteral("Время передачи файла Tф = (M/k)·n·T·L, T = 1/скорость"));
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setAlternatingRowColors(true);
@@ -89,6 +100,7 @@ void ResultsTable::addResult(const crc::SimulationResult& result)
     setCell(row, DetectedShare, probabilityText(summary.detected), probabilityToolTip(summary.detected));
     setCell(row, UndetectedShare, probabilityText(summary.undetected), undetectedToolTip(result));
     setCell(row, Redundancy, number(summary.redundancy, 3));
+    fillTransferCells(row);
     scrollToBottom();
 }
 
@@ -112,6 +124,31 @@ void ResultsTable::rememberSpectrum(const crc::CyclicCode& code, const crc::Weig
         if (sameCode(result.code, code))
             item(row, UndetectedShare)->setToolTip(undetectedToolTip(result));
     }
+}
+
+void ResultsTable::setTransfer(const std::optional<crc::TransferSettings>& transfer)
+{
+    transfer_ = transfer;
+    for (int row = 0; row < rowCount(); ++row)
+        fillTransferCells(row);
+}
+
+void ResultsTable::fillTransferCells(int row)
+{
+    const crc::SimulationResult& result = results_[static_cast<std::size_t>(row)];
+    const std::optional<double> attempts = crc::meanAttempts(result.counters);
+    if (!attempts) {
+        const QString reason = QString::fromUtf8(infiniteAttemptsToolTip);
+        setCell(row, MeanAttempts, QStringLiteral("—"), reason);
+        setCell(row, TransferTime, QStringLiteral("—"), reason);
+        return;
+    }
+    setCell(row, MeanAttempts, significant(*attempts));
+    if (!transfer_) {
+        setCell(row, TransferTime, QStringLiteral("—"), QStringLiteral("задайте размер файла M и скорость больше 0"));
+        return;
+    }
+    setCell(row, TransferTime, significant(*crc::transferTime(result, *transfer_)));
 }
 
 void ResultsTable::clearResults()
