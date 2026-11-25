@@ -8,6 +8,7 @@
 #include "results_table.h"
 #include "run_report.h"
 #include "user_guide_view.h"
+#include "walkthrough_panel.h"
 
 #include "results.h"
 
@@ -42,6 +43,7 @@ MainWindow::MainWindow(QWidget* parent)
     , saveButton_(new QPushButton(QStringLiteral("Сохранить в CSV")))
     , analysisPanel_(new AnalysisPanel)
     , tabs_(new QTabWidget)
+    , walkthroughPanel_(new WalkthroughPanel)
     , runner_(this)
 {
     setWindowTitle(QStringLiteral("Исследование циклических кодов в режиме обнаружения ошибок"));
@@ -87,6 +89,7 @@ QWidget* MainWindow::createRunColumn()
     tabs_->setObjectName(QStringLiteral("resultTabs"));
     tabs_->addTab(createSimulationTab(), QStringLiteral("Моделирование"));
     tabs_->addTab(analysisPanel_, QStringLiteral("Анализ кода"));
+    tabs_->addTab(walkthroughPanel_, QStringLiteral("Разбор блока"));
     tabs_->addTab(createUserGuideView(), QStringLiteral("Руководство"));
     return tabs_;
 }
@@ -157,6 +160,7 @@ void MainWindow::revalidate()
     std::vector<FieldError> errors = codingPanel_->validate();
     updateAnalysisCode(errors.empty());
     const std::vector<FieldError> channelErrors = channelPanel_->validate();
+    updateWalkthrough(joinFieldErrors(errors), channelErrors.empty());
     const std::vector<FieldError> controlErrors = controlPanel_->validate();
     errors.insert(errors.end(), channelErrors.begin(), channelErrors.end());
     errors.insert(errors.end(), controlErrors.begin(), controlErrors.end());
@@ -169,6 +173,15 @@ void MainWindow::revalidate()
 void MainWindow::updateAnalysisCode(bool codingValid)
 {
     analysisPanel_->setCode(codingValid ? std::optional<crc::CyclicCode>(crc::makeCode(codingPanel_->params())) : std::nullopt);
+}
+
+void MainWindow::updateWalkthrough(const QString& codingProblem, bool channelValid)
+{
+    const bool codingValid = codingProblem.isEmpty();
+    walkthroughPanel_->setCode(
+        codingValid ? std::optional<crc::CyclicCode>(crc::makeCode(codingPanel_->params())) : std::nullopt, codingProblem);
+    walkthroughPanel_->setChannel(channelValid ? std::optional<crc::ChannelParams>(channelPanel_->params()) : std::nullopt,
+        QStringLiteral("исправьте параметры канала в левой панели"));
 }
 
 void MainWindow::setRunning(bool running)

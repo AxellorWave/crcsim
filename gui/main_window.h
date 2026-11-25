@@ -16,6 +16,7 @@ class QProgressBar;
 class QPushButton;
 class QTabWidget;
 class ResultsTable;
+class WalkthroughPanel;
 
 class MainWindow : public QMainWindow {
 public:
@@ -42,6 +43,7 @@ private:
     void clearResults();
     void updateTableButtons();
     void updateAnalysisCode(bool codingValid);
+    void updateWalkthrough(const QString& codingProblem, bool channelValid);
 
     CodingPanel* codingPanel_;
     ChannelPanel* channelPanel_;
@@ -58,6 +60,7 @@ private:
     QPushButton* saveButton_;
     AnalysisPanel* analysisPanel_;
     QTabWidget* tabs_;
+    WalkthroughPanel* walkthroughPanel_;
     SimulationRunner runner_;
     crc::ControlParams runningControl_;
     bool parametersValid_ = false;
