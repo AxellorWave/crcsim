@@ -3,6 +3,7 @@
 #include "bit_cells_edit.h"
 #include "media_icons.h"
 #include "stage_strip.h"
+#include "theme.h"
 #include "walkthrough_canvas.h"
 #include "walkthrough_style.h"
 
@@ -59,8 +60,9 @@ private:
 
 QPushButton* playbackButton(MediaGlyph glyph, const QString& text, const QString& toolTip)
 {
-    auto* button = new QPushButton(mediaIcon(glyph), text);
+    auto* button = new QPushButton(text);
     button->setToolTip(toolTip);
+    keepThemed(button, [button, glyph] { button->setIcon(mediaIcon(glyph)); });
     return button;
 }
 
@@ -72,6 +74,24 @@ QString speedText(double factor)
 int stageIndex(WalkStage stage)
 {
     return static_cast<int>(stage);
+}
+
+QString captionStyle(const Theme& theme)
+{
+    return QStringLiteral("QLabel { background: %1; border-left: 4px solid %2; border-radius: 4px; padding: 8px 12px; "
+                          "color: %3; font-size: 14pt; }")
+        .arg(cssColor(theme.caption), cssColor(theme.accent), cssColor(theme.text));
+}
+
+QString canvasFrameStyle(const Theme& theme)
+{
+    return QStringLiteral("QScrollArea { border: 1px solid %1; border-radius: 6px; background: %2; }")
+        .arg(cssColor(theme.border), cssColor(theme.surface));
+}
+
+QString backgroundStyle(const QColor& color)
+{
+    return QStringLiteral("background: %1;").arg(cssColor(color));
 }
 
 }
@@ -119,12 +139,10 @@ WalkthroughPanel::WalkthroughPanel(QWidget* parent)
     textView_->setFont(textFont);
     messageLabel_->setWordWrap(true);
     messageLabel_->setAlignment(Qt::AlignCenter);
-    messageLabel_->setStyleSheet(QStringLiteral("color: #4A5568; font-size: 14pt;"));
     pages_->addWidget(visualPage_);
     pages_->addWidget(textView_);
     pages_->addWidget(messageLabel_);
 
-    limitLabel_->setStyleSheet(QStringLiteral("color: #b45309;"));
     auto* layout = new QVBoxLayout(this);
     layout->addWidget(inputs_);
     layout->addWidget(limitLabel_);
@@ -137,15 +155,31 @@ WalkthroughPanel::WalkthroughPanel(QWidget* parent)
     scrollAnimation_.setDuration(scrollMs);
     scrollAnimation_.setEasingCurve(QEasingCurve::InOutCubic);
     connectActions();
+    keepThemed(this, [this] { applyThemeStyles(); });
     setCode(std::nullopt, QStringLiteral("не заданы параметры кода"));
+}
+
+void WalkthroughPanel::applyThemeStyles()
+{
+    const Theme& theme = currentTheme();
+    messageLabel_->setStyleSheet(textColorStyle(theme.secondaryText) + QStringLiteral(" font-size: 14pt;"));
+    limitLabel_->setStyleSheet(textColorStyle(theme.warningText));
+    codeLabel_->setStyleSheet(textColorStyle(theme.text) + QStringLiteral(" font-size: 13pt;"));
+    noteLabel_->setStyleSheet(textColorStyle(theme.secondaryText));
+    stepLabel_->setStyleSheet(textColorStyle(theme.secondaryText));
+    captionLabel_->setStyleSheet(captionStyle(theme));
+    scrollArea_->setStyleSheet(canvasFrameStyle(theme));
+    scrollArea_->viewport()->setStyleSheet(backgroundStyle(theme.surface));
+    strip_->update();
+    canvas_->update();
+    dataEdit_->update();
+    errorEdit_->update();
 }
 
 QWidget* WalkthroughPanel::createInputs()
 {
     codeLabel_->setTextFormat(Qt::RichText);
-    codeLabel_->setStyleSheet(QStringLiteral("color: #14213D; font-size: 13pt;"));
     noteLabel_->setWordWrap(true);
-    noteLabel_->setStyleSheet(QStringLiteral("color: #4A5568;"));
     dataEdit_->setObjectName(QStringLiteral("walkthroughDataEdit"));
     errorEdit_->setObjectName(QStringLiteral("walkthroughErrorEdit"));
     dataEdit_->setToolTip(QStringLiteral("Информационные биты D: щёлкните по клетке, чтобы изменить бит"));
@@ -188,9 +222,6 @@ QWidget* WalkthroughPanel::createVisualPage()
     captionLabel_->setObjectName(QStringLiteral("walkthroughCaption"));
     captionLabel_->setWordWrap(true);
     captionLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    captionLabel_->setStyleSheet(QStringLiteral("QLabel { background: #f3f7fc; border-left: 4px solid #2a78d6; "
-                                                "border-radius: 4px; padding: 8px 12px; color: #14213D; font-size: 14pt; }"));
-    stepLabel_->setStyleSheet(QStringLiteral("color: #4A5568;"));
 
     auto* page = new QWidget;
     auto* layout = new QVBoxLayout(page);
@@ -208,8 +239,6 @@ QScrollArea* WalkthroughPanel::createCanvasArea()
     scrollArea_->setWidgetResizable(false);
     scrollArea_->setWidget(canvas_);
     scrollArea_->setFrameShape(QFrame::StyledPanel);
-    scrollArea_->setStyleSheet(QStringLiteral("QScrollArea { border: 1px solid #e4e3df; border-radius: 6px; background: white; }"));
-    scrollArea_->viewport()->setStyleSheet(QStringLiteral("background: white;"));
     scrollAnimation_.setTargetObject(scrollArea_->verticalScrollBar());
     return scrollArea_;
 }

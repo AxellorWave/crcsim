@@ -1,5 +1,6 @@
 #include "stage_strip.h"
 
+#include "theme.h"
 #include "walkthrough_style.h"
 
 #include <QPainter>
@@ -71,7 +72,7 @@ void StageStrip::paintEvent(QPaintEvent*)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(rect(), walkstyle::paper);
+    painter.fillRect(rect(), currentTheme().surface);
 
     const double gap = std::max(30.0, width() * 0.04);
     const double boxWidth = (width() - 2 * margin - gap * (stageCount - 1)) / stageCount;
@@ -88,33 +89,36 @@ void StageStrip::paintEvent(QPaintEvent*)
 
 void StageStrip::drawStage(QPainter& painter, const QRectF& box, const Stage& stage, int index) const
 {
+    const Theme& theme = currentTheme();
     const double active = activity(index);
     const bool passed = position_ > index;
-    const QColor restFill = passed ? QColor(0xe8, 0xf0, 0xfa) : walkstyle::paper;
-    const QColor restBorder = passed ? QColor(0x9c, 0xbf, 0xea) : walkstyle::grid;
-    const QColor restTitle = passed ? walkstyle::ink : walkstyle::secondary;
+    const QColor restFill = passed ? theme.accentSoft : theme.surface;
+    const QColor restBorder = passed ? theme.accentSoftBorder : theme.border;
+    const QColor restTitle = passed ? theme.text : theme.secondaryText;
 
-    painter.setPen(QPen(walkstyle::mix(restBorder, walkstyle::dataColor, active), 1.5));
-    painter.setBrush(walkstyle::mix(restFill, walkstyle::dataColor, active));
+    painter.setPen(QPen(walkstyle::mix(restBorder, theme.accent, active), 1.5));
+    painter.setBrush(walkstyle::mix(restFill, theme.accent, active));
     painter.drawRoundedRect(box.adjusted(0.75, 0.75, -0.75, -0.75), 8, 8);
 
     const QRectF titleArea(box.left(), box.top() + 3, box.width(), box.height() * 0.52);
     painter.setFont(walkstyle::labelFont(14.0, true));
-    painter.setPen(walkstyle::mix(restTitle, walkstyle::paper, active));
+    painter.setPen(walkstyle::mix(restTitle, theme.accentText, active));
     painter.drawText(titleArea, Qt::AlignHCenter | Qt::AlignBottom, stage.title);
 
     const QRectF noteArea(box.left(), titleArea.bottom(), box.width(), box.bottom() - titleArea.bottom() - 3);
     painter.setFont(walkstyle::labelFont(13.0));
-    painter.setPen(walkstyle::mix(walkstyle::muted, QColor(0xdc, 0xe9, 0xfa), active));
+    painter.setPen(walkstyle::mix(theme.mutedText, theme.accentSoftText, active));
     painter.drawText(noteArea, Qt::AlignHCenter | Qt::AlignTop, stage.note);
 }
 
 void StageStrip::drawArrow(QPainter& painter, const QRectF& from, const QRectF& to, double activity) const
 {
+    const Theme& theme = currentTheme();
     const double y = from.center().y();
     const QPointF start(from.right() + 4, y);
     const QPointF end(to.left() - 4, y);
-    const QColor color = walkstyle::mix(walkstyle::grid.darker(115), walkstyle::dataColor, activity);
+    const QColor rest = theme.dark ? theme.mutedText.darker(130) : theme.border.darker(115);
+    const QColor color = walkstyle::mix(rest, theme.accent, activity);
     painter.setPen(QPen(color, 1.8, Qt::SolidLine, Qt::RoundCap));
     painter.drawLine(start, end - QPointF(arrowHead, 0));
     painter.setPen(Qt::NoPen);

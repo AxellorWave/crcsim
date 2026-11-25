@@ -1,5 +1,7 @@
 #pragma once
 
+#include "theme.h"
+
 #include <QColor>
 #include <QFont>
 #include <QRectF>
@@ -8,21 +10,7 @@ class QPainter;
 
 namespace walkstyle {
 
-inline const QColor ink(0x14, 0x21, 0x3d);
-inline const QColor secondary(0x4a, 0x55, 0x68);
-inline const QColor muted(0x8a, 0x93, 0xa3);
-inline const QColor grid(0xe4, 0xe3, 0xdf);
-inline const QColor paper(0xff, 0xff, 0xff);
-inline const QColor dataColor(0x2a, 0x78, 0xd6);
-inline const QColor checkColor(0xeb, 0x68, 0x34);
-inline const QColor errorColor(0xd0, 0x34, 0x2c);
-inline const QColor successColor(0x2e, 0x9e, 0x5b);
-
-struct CellLook {
-    QColor fill;
-    QColor border;
-    QColor text;
-};
+using CellLook = CellColors;
 
 CellLook dataLook();
 CellLook checkLook();

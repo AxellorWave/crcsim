@@ -41,13 +41,13 @@ QColor verdictAccent(crc::Verdict verdict)
 {
     switch (verdict) {
     case crc::Verdict::Correct:
-        return successColor;
+        return currentTheme().success;
     case crc::Verdict::Detected:
-        return dataColor;
+        return currentTheme().accent;
     case crc::Verdict::Undetected:
-        return errorColor;
+        return currentTheme().danger;
     }
-    return dataColor;
+    return currentTheme().accent;
 }
 
 }
@@ -232,7 +232,7 @@ void WalkthroughCanvas::drawLabel(
     painter.save();
     painter.setOpacity(painter.opacity() * clamp01(opacity));
     painter.setFont(labelFont(13.0));
-    painter.setPen(secondary);
+    painter.setPen(currentTheme().secondaryText);
     const QRectF area(layout.gridLeft - labelWidth, rowTop(layout, row), labelWidth - labelGap, layout.cell);
     painter.drawText(area, Qt::AlignRight | Qt::AlignVCenter, text);
     painter.restore();
@@ -242,7 +242,7 @@ void WalkthroughCanvas::drawHeader(QPainter& painter, const Layout& layout) cons
 {
     painter.save();
     painter.setFont(labelFont(13.0));
-    painter.setPen(muted);
+    painter.setPen(currentTheme().mutedText);
     const double top = layout.top;
     const QRectF labelArea(layout.gridLeft - labelWidth, top, labelWidth - labelGap, headerHeight - 6);
     painter.drawText(labelArea, Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("степень"));
@@ -250,7 +250,7 @@ void WalkthroughCanvas::drawHeader(QPainter& painter, const Layout& layout) cons
         const QRectF area(layout.gridLeft + column * layout.pitch, top, layout.pitch, headerHeight - 6);
         painter.drawText(area, Qt::AlignCenter, QString::number(trace_.code.n - 1 - column));
     }
-    painter.setPen(QPen(grid, 1.0));
+    painter.setPen(QPen(currentTheme().grid, 1.0));
     const double lineY = top + headerHeight - 3;
     painter.drawLine(QPointF(layout.gridLeft, lineY), QPointF(layout.gridLeft + trace_.code.n * layout.pitch, lineY));
     painter.restore();
@@ -273,7 +273,7 @@ void WalkthroughCanvas::drawRule(QPainter& painter, const Layout& layout, double
     const double left = layout.gridLeft + firstColumn * layout.pitch + 3;
     const double right = layout.gridLeft + trace_.code.n * layout.pitch - 3;
     painter.save();
-    painter.setPen(QPen(secondary, 1.4, Qt::SolidLine, Qt::RoundCap));
+    painter.setPen(QPen(currentTheme().secondaryText, 1.4, Qt::SolidLine, Qt::RoundCap));
     painter.drawLine(QPointF(left, y), QPointF(left + (right - left) * clamp01(extent), y));
     painter.restore();
 }
@@ -294,7 +294,7 @@ void WalkthroughCanvas::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
-    painter.fillRect(rect(), paper);
+    painter.fillRect(rect(), currentTheme().surface);
     if (steps_.empty())
         return;
     const Layout layout = sceneLayout(width());
@@ -368,9 +368,9 @@ void WalkthroughCanvas::drawDivisionFocus(QPainter& painter, const Layout& layou
         if (strength <= 0.0)
             continue;
         const double sourceRow = 2.0 * index;
-        drawBand(painter, spanRect(layout, sourceRow, sourceRow + 1, column, column + h), dataColor, strength);
+        drawBand(painter, spanRect(layout, sourceRow, sourceRow + 1, column, column + h), currentTheme().accent, strength);
         painter.save();
-        painter.setPen(QPen(withAlpha(dataColor, strength), 2.4));
+        painter.setPen(QPen(withAlpha(currentTheme().accent, strength), 2.4));
         painter.setBrush(Qt::NoBrush);
         const QRectF lead = cellRect(layout, sourceRow, column).adjusted(-3.5, -3.5, 3.5, 3.5);
         painter.drawRoundedRect(lead, lead.width() * 0.26, lead.width() * 0.26);
@@ -463,7 +463,7 @@ void WalkthroughCanvas::drawChannel(QPainter& painter, const Layout& layout) con
 
     for (int column = 0; column < n; ++column) {
         if (bitAt(trace_.errors, column))
-            drawBand(painter, spanRect(layout, 0, 2, column, column), errorColor, easeOut(errorsShown) * 0.9);
+            drawBand(painter, spanRect(layout, 0, 2, column, column), currentTheme().danger, easeOut(errorsShown) * 0.9);
     }
     drawLabel(painter, layout, 0, QStringLiteral("F"), intro);
     drawRow(painter, layout, 0, trace_.codeword, 0, [this](int column, bool) { return codewordLook(column); }, intro);
@@ -498,7 +498,7 @@ void WalkthroughCanvas::drawFlashingErrors(QPainter& painter, const Layout& layo
             continue;
         const double grow = 4.0 + 6.0 * flash;
         const QRectF halo = cellRect(layout, row, column).adjusted(-grow, -grow, grow, grow);
-        painter.setPen(QPen(withAlpha(errorColor, 0.55 * flash), 3.0));
+        painter.setPen(QPen(withAlpha(currentTheme().danger, 0.55 * flash), 3.0));
         painter.drawRoundedRect(halo, halo.width() * 0.28, halo.width() * 0.28);
     }
     painter.restore();
@@ -571,7 +571,7 @@ void WalkthroughCanvas::drawVerdictCard(QPainter& painter, const QRectF& card, d
     painter.save();
     painter.setOpacity(appear);
     painter.setPen(QPen(withAlpha(accent, 0.55), 1.4));
-    painter.setBrush(mix(paper, accent, 0.10));
+    painter.setBrush(mix(currentTheme().surface, accent, 0.10));
     painter.drawRoundedRect(box, 12, 12);
 
     QPainterPath stripe;
@@ -586,7 +586,7 @@ void WalkthroughCanvas::drawVerdictCard(QPainter& painter, const QRectF& card, d
     painter.setPen(Qt::NoPen);
     painter.setBrush(accent);
     painter.drawEllipse(icon);
-    painter.setPen(QPen(paper, 4.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setPen(QPen(currentTheme().accentText, 4.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     const QPointF c = icon.center();
     const double s = iconSize / 44.0;
     if (trace_.verdict == crc::Verdict::Correct) {
@@ -602,11 +602,11 @@ void WalkthroughCanvas::drawVerdictCard(QPainter& painter, const QRectF& card, d
     const double textLeft = icon.right() + cardPadding;
     const QRectF textArea(textLeft, box.top() + cardPadding, box.right() - cardPadding - textLeft, box.height() - 2 * cardPadding);
     painter.setFont(labelFont(16.0, true));
-    painter.setPen(ink);
+    painter.setPen(currentTheme().text);
     QRectF titleBounds;
     painter.drawText(textArea, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, verdictTitle(trace_.verdict), &titleBounds);
     painter.setFont(labelFont(13.0));
-    painter.setPen(secondary);
+    painter.setPen(currentTheme().secondaryText);
     const QRectF bodyArea(textArea.left(), titleBounds.bottom() + 8, textArea.width(), textArea.bottom() - titleBounds.bottom());
     painter.drawText(bodyArea, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, verdictExplanation(trace_));
     painter.restore();

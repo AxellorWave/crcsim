@@ -10,42 +10,42 @@ namespace walkstyle {
 
 CellLook dataLook()
 {
-    return {QColor(0xe6, 0xf0, 0xfb), dataColor, ink};
+    return currentTheme().dataCell;
 }
 
 CellLook checkLook()
 {
-    return {QColor(0xfd, 0xeb, 0xe2), checkColor, ink};
+    return currentTheme().checkCell;
 }
 
 CellLook placeholderLook()
 {
-    return {paper, QColor(0xf4, 0xb8, 0x9c), secondary};
+    return currentTheme().placeholderCell;
 }
 
 CellLook plainLook()
 {
-    return {QColor(0xfa, 0xf9, 0xf7), QColor(0xcf, 0xcd, 0xc7), ink};
+    return currentTheme().plainCell;
 }
 
 CellLook divisorLook()
 {
-    return {QColor(0xec, 0xef, 0xf5), QColor(0x7d, 0x88, 0x9c), secondary};
+    return currentTheme().divisorCell;
 }
 
 CellLook dimLook()
 {
-    return {paper, QColor(0xee, 0xed, 0xea), QColor(0xc4, 0xc7, 0xcd)};
+    return currentTheme().dimCell;
 }
 
 CellLook errorLook()
 {
-    return {errorColor, QColor(0xa8, 0x24, 0x1d), paper};
+    return currentTheme().errorCell;
 }
 
 CellLook syndromeLook()
 {
-    return {ink, ink, paper};
+    return currentTheme().syndromeCell;
 }
 
 QColor mix(const QColor& from, const QColor& to, double amount)

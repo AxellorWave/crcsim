@@ -82,8 +82,8 @@ void BitCellsEdit::paintEvent(QPaintEvent*)
         const bool bit = (bits_ >> (length_ - 1 - column)) & 1;
         walkstyle::CellLook look = lookProvider_(column, bit);
         if (column == hovered_ && isEnabled())
-            look.border = walkstyle::ink;
-        paintBitCell(painter, cellRect(column), bit, look, isEnabled() ? 1.0 : 0.5);
+            look.border = currentTheme().text;
+        walkstyle::paintBitCell(painter, cellRect(column), bit, look, isEnabled() ? 1.0 : 0.5);
     }
 }
 

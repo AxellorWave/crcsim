@@ -4,6 +4,7 @@
 #include "help_button.h"
 #include "input_parsing.h"
 #include "probability_format.h"
+#include "theme.h"
 
 #include "results.h"
 
@@ -75,7 +76,7 @@ AnalysisPanel::AnalysisPanel(QWidget* parent)
     connect(probabilityEdit_, &QLineEdit::textChanged, this, [this] { updateProbability(); });
     plot_->setMessage(QStringLiteral("Нажмите «Рассчитать», чтобы построить зависимость Pлож(p) для выбранного кода"));
     showSummary();
-    updateProbability();
+    keepThemed(probabilityLabel_, [this] { updateProbability(); });
     updateControls();
 }
 
@@ -283,7 +284,7 @@ void AnalysisPanel::updateProbability()
     const std::optional<double> p = validBitErrorProbability(probabilityEdit_->text());
     plot_->setMarkedProbability(p);
     if (!p) {
-        probabilityLabel_->setStyleSheet(QStringLiteral("color: #b01010;"));
+        probabilityLabel_->setStyleSheet(textColorStyle(currentTheme().dangerText));
         probabilityLabel_->setText(QStringLiteral("p должна быть в интервале (0; 0,5]"));
         return;
     }

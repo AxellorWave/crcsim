@@ -2,6 +2,7 @@
 
 #include "field_error.h"
 #include "input_parsing.h"
+#include "theme.h"
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -34,7 +35,7 @@ TransferFields::TransferFields(QWidget* parent)
         QStringLiteral("Размер передаваемого файла M в битах"));
     rateEdit_ = createEdit(QStringLiteral("bitRateEdit"), formatCount(static_cast<std::uint64_t>(defaults.bitRate)),
         QStringLiteral("Скорость передачи по каналу, бит/с; длительность бита T = 1/скорость"));
-    errorLabel_->setStyleSheet(QStringLiteral("color: #b01010;"));
+    keepTextColor(errorLabel_, &Theme::dangerText);
 
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
