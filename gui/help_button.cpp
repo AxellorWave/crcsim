@@ -23,13 +23,18 @@ const char* const buttonStyle =
 
 const char* const popupStyle =
     "QFrame#helpPopup { background: #ffffff; border: 1px solid #2a78d6; border-radius: 6px; }"
-    "QLabel#helpPopupTitle { color: #2a78d6; font-weight: bold; font-size: 11pt; }"
     "QLabel#helpPopupBody { color: #14213D; }";
 
-QLabel* createPopupLabel(const QString& objectName, const QString& text)
+QString popupHtml(HelpTopic topic)
+{
+    return QStringLiteral("<p style='color:#2a78d6; font-size:11pt; font-weight:600; margin:0 0 6px 0'>%1</p>%2")
+        .arg(parameterHelp(topic).title, parameterHelpHtml(topic));
+}
+
+QLabel* createPopupLabel(const QString& text)
 {
     auto* label = new QLabel(text);
-    label->setObjectName(objectName);
+    label->setObjectName(QStringLiteral("helpPopupBody"));
     label->setTextFormat(Qt::RichText);
     label->setWordWrap(true);
     return label;
@@ -44,10 +49,8 @@ QFrame* createPopup(HelpTopic topic, QWidget* anchor)
     popup->setFixedWidth(popupWidth);
     auto* layout = new QVBoxLayout(popup);
     layout->setContentsMargins(14, 10, 14, 12);
-    layout->setSpacing(6);
-    layout->addWidget(createPopupLabel(QStringLiteral("helpPopupTitle"), parameterHelp(topic).title));
-    layout->addWidget(createPopupLabel(QStringLiteral("helpPopupBody"), parameterHelpHtml(topic)));
-    popup->adjustSize();
+    layout->addWidget(createPopupLabel(popupHtml(topic)));
+    popup->setFixedHeight(popup->heightForWidth(popupWidth));
     return popup;
 }
 
@@ -94,7 +97,6 @@ QWidget* withHelpButton(QWidget* field, HelpTopic topic)
     auto* row = new QWidget;
     auto* layout = new QHBoxLayout(row);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
     layout->addWidget(field, 1);
     layout->addWidget(createHelpButton(topic, row));
     return row;
