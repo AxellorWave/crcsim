@@ -14,11 +14,6 @@ std::optional<double> TheoryCache::undetectedProbability(const crc::CyclicCode& 
     return crc::undetectedProbability(*spectrum, bitErrorProbability);
 }
 
-void TheoryCache::store(const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum)
-{
-    spectra_[std::make_pair(code.n, code.generator)] = spectrum;
-}
-
 const crc::WeightSpectrum* TheoryCache::spectrumOf(const crc::CyclicCode& code)
 {
     const auto key = std::make_pair(code.n, code.generator);

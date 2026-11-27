@@ -9,7 +9,6 @@
 class TheoryCache {
 public:
     std::optional<double> undetectedProbability(const crc::CyclicCode& code, double bitErrorProbability);
-    void store(const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum);
 
 private:
     const crc::WeightSpectrum* spectrumOf(const crc::CyclicCode& code);

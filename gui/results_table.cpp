@@ -45,11 +45,6 @@ QString significant(double value)
     return QString::fromStdString(crc::formatSignificant(value, 4, false));
 }
 
-bool sameCode(const crc::CyclicCode& left, const crc::CyclicCode& right)
-{
-    return left.n == right.n && left.generator == right.generator;
-}
-
 }
 
 ResultsTable::ResultsTable(QWidget* parent)
@@ -114,16 +109,6 @@ QString ResultsTable::undetectedToolTip(const crc::SimulationResult& result)
         return observed;
     const QString theoryText = QStringLiteral("теория: ") + formatSmallProbability(*theory);
     return observed.isEmpty() ? theoryText : observed + QLatin1Char('\n') + theoryText;
-}
-
-void ResultsTable::rememberSpectrum(const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum)
-{
-    theory_.store(code, spectrum);
-    for (int row = 0; row < rowCount(); ++row) {
-        const crc::SimulationResult& result = results_[static_cast<std::size_t>(row)];
-        if (sameCode(result.code, code))
-            item(row, UndetectedShare)->setToolTip(undetectedToolTip(result));
-    }
 }
 
 void ResultsTable::setTransfer(const std::optional<crc::TransferSettings>& transfer)

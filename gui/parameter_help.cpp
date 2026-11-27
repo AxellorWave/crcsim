@@ -109,15 +109,6 @@ ParameterHelp controlHelp(HelpTopic topic)
     }
 }
 
-ParameterHelp analysisHelp()
-{
-    return {QStringLiteral("p на вкладке «Анализ кода»"),
-        QStringLiteral("Вероятность ошибки на бит в ДСК, для которой считается точная Pлож по весовому спектру."),
-        QStringLiteral("0 &lt; p ≤ 0,5; можно вводить с запятой или с точкой."),
-        QStringLiteral("0,005 — сравнить с результатом моделирования при том же p."),
-        QStringLiteral("рядом показывается, выполняется ли требование Pлож ≤ 10⁻⁶.")};
-}
-
 QString paragraph(const QString& label, const QString& text)
 {
     return QStringLiteral("<p style='margin:4px 0'><b>%1</b> %2</p>").arg(label, text);
@@ -147,8 +138,6 @@ ParameterHelp parameterHelp(HelpTopic topic)
     case HelpTopic::ErrorInBad:
     case HelpTopic::ErrorInGood:
         return gilbertHelp(topic);
-    case HelpTopic::AnalysisProbability:
-        return analysisHelp();
     default:
         return controlHelp(topic);
     }

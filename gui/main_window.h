@@ -6,7 +6,6 @@
 
 #include <QMainWindow>
 
-class AnalysisPanel;
 class BatchPanel;
 class ChannelPanel;
 class CodingPanel;
@@ -45,7 +44,6 @@ private:
     void saveResults();
     void clearResults();
     void updateTableButtons();
-    void updateAnalysisCode(bool codingValid);
     void updateWalkthrough(const QString& codingProblem, bool channelValid);
     void connectBatchAndSelection();
     void addBatchResult(const crc::SimulationResult& result);
@@ -63,7 +61,6 @@ private:
     ResultsTable* resultsTable_;
     QPushButton* clearButton_;
     QPushButton* saveButton_;
-    AnalysisPanel* analysisPanel_;
     QTabWidget* tabs_;
     WalkthroughPanel* walkthroughPanel_;
     SimulationRunner runner_;

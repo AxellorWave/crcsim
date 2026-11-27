@@ -17,7 +17,6 @@ public:
     void addResult(const crc::SimulationResult& result);
     void clearResults();
     const std::vector<crc::SimulationResult>& results() const;
-    void rememberSpectrum(const crc::CyclicCode& code, const crc::WeightSpectrum& spectrum);
     void setTransfer(const std::optional<crc::TransferSettings>& transfer);
 
 private:

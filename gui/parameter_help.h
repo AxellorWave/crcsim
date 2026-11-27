@@ -16,7 +16,6 @@ enum class HelpTopic {
     BlockLimit,
     ErrorLimit,
     Seed,
-    AnalysisProbability,
 };
 
 struct ParameterHelp {
